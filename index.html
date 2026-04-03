@@ -1,367 +1,721 @@
-import { useState, useEffect, useRef } from "react";
-import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer, Cell
-} from "recharts";
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Turnover Rate Dashboard — FY2025</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2330;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --cpp: #58a6ff;
+    --ckm: #f78166;
+    --tfw: #3fb950;
+    --accent: #ffd700;
+    --danger: #ff7b72;
+    --font: 'IBM Plex Sans Thai', sans-serif;
+    --mono: 'IBM Plex Mono', monospace;
+  }
 
-const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-const SUBS = ["SUB CPP","SUB CKM","SUB TFW"];
-const C = { "SUB CPP":"#38bdf8","SUB CKM":"#fb923c","SUB TFW":"#f472b6" };
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-const SEED = [
-  {id:1,month:"JAN",sub:"SUB CPP",start:284,end:274,resign:12},
-  {id:2,month:"JAN",sub:"SUB CKM",start:104,end:96,resign:17},
-  {id:3,month:"JAN",sub:"SUB TFW",start:0,end:3,resign:0},
-  {id:4,month:"FEB",sub:"SUB CPP",start:274,end:265,resign:9},
-  {id:5,month:"FEB",sub:"SUB CKM",start:96,end:95,resign:15},
-  {id:6,month:"FEB",sub:"SUB TFW",start:3,end:11,resign:2},
-  {id:7,month:"MAR",sub:"SUB CPP",start:265,end:260,resign:5},
-  {id:8,month:"MAR",sub:"SUB CKM",start:95,end:100,resign:11},
-  {id:9,month:"MAR",sub:"SUB TFW",start:11,end:17,resign:8},
-  {id:10,month:"APR",sub:"SUB CPP",start:260,end:253,resign:10},
-  {id:11,month:"APR",sub:"SUB CKM",start:100,end:104,resign:12},
-  {id:12,month:"APR",sub:"SUB TFW",start:17,end:19,resign:11},
-  {id:13,month:"MAY",sub:"SUB CPP",start:253,end:261,resign:7},
-  {id:14,month:"MAY",sub:"SUB CKM",start:104,end:138,resign:14},
-  {id:15,month:"MAY",sub:"SUB TFW",start:19,end:44,resign:24},
-  {id:16,month:"JUN",sub:"SUB CPP",start:261,end:248,resign:13},
-  {id:17,month:"JUN",sub:"SUB CKM",start:138,end:145,resign:23},
-  {id:18,month:"JUN",sub:"SUB TFW",start:44,end:50,resign:15},
-  {id:19,month:"JUL",sub:"SUB CPP",start:248,end:246,resign:2},
-  {id:20,month:"JUL",sub:"SUB CKM",start:145,end:152,resign:24},
-  {id:21,month:"JUL",sub:"SUB TFW",start:50,end:52,resign:19},
-  {id:22,month:"AUG",sub:"SUB CPP",start:246,end:242,resign:4},
-  {id:23,month:"AUG",sub:"SUB CKM",start:152,end:158,resign:13},
-  {id:24,month:"AUG",sub:"SUB TFW",start:52,end:57,resign:12},
-  {id:25,month:"SEP",sub:"SUB CPP",start:242,end:241,resign:1},
-  {id:26,month:"SEP",sub:"SUB CKM",start:158,end:151,resign:18},
-  {id:27,month:"SEP",sub:"SUB TFW",start:57,end:64,resign:4},
-  {id:28,month:"OCT",sub:"SUB CPP",start:241,end:237,resign:4},
-  {id:29,month:"OCT",sub:"SUB CKM",start:151,end:161,resign:14},
-  {id:30,month:"OCT",sub:"SUB TFW",start:64,end:66,resign:15},
-  {id:31,month:"NOV",sub:"SUB CPP",start:237,end:235,resign:2},
-  {id:32,month:"NOV",sub:"SUB CKM",start:161,end:178,resign:11},
-  {id:33,month:"NOV",sub:"SUB TFW",start:66,end:69,resign:9},
-  {id:34,month:"DEC",sub:"SUB CPP",start:235,end:234,resign:1},
-  {id:35,month:"DEC",sub:"SUB CKM",start:178,end:174,resign:5},
-  {id:36,month:"DEC",sub:"SUB TFW",start:69,end:70,resign:3},
-];
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    padding: 0;
+  }
 
-function calc(rows) {
-  return rows.map(r => {
-    const avg = (r.start + r.end) / 2;
-    return { ...r, avg, turnover: avg > 0 ? (r.resign / avg) * 100 : 0 };
-  });
-}
+  /* ─── TOP BAR ─── */
+  header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .logo h1 { font-size: 16px; font-weight: 600; letter-spacing: .3px; }
+  .logo span { font-size: 12px; color: var(--muted); font-family: var(--mono); }
 
-const Tip = ({ active, payload, label }) => {
-  if (!active || !payload?.length) return null;
-  return (
-    <div style={{background:"#0d1628",border:"1px solid #1e2d52",borderRadius:8,padding:"10px 14px",fontSize:12}}>
-      <p style={{color:"#6b82aa",marginBottom:4,fontWeight:600}}>{label}</p>
-      {payload.map((p,i) => (
-        <p key={i} style={{color:p.color,margin:"2px 0"}}>
-          {p.name}: <b>{typeof p.value==="number" ? p.value.toFixed(2) : p.value}</b>
-        </p>
-      ))}
+  .upload-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 18px;
+    border-radius: 8px;
+    font-family: var(--font);
+    font-size: 13px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 8px;
+    transition: border-color .2s, background .2s;
+  }
+  .upload-btn:hover { border-color: var(--accent); background: #1f2633; }
+  #fileInput { display: none; }
+
+  /* ─── MAIN ─── */
+  main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 28px 32px 60px;
+  }
+
+  /* ─── FILTER BAR ─── */
+  .filters {
+    display: flex; gap: 12px; flex-wrap: wrap;
+    margin-bottom: 24px;
+    align-items: center;
+  }
+  .filter-label { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  .pill-group { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill {
+    padding: 5px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    font-size: 12px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--muted);
+    transition: all .15s;
+    font-family: var(--font);
+  }
+  .pill.active { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+  .pill.cpp.active { background: var(--cpp); border-color: var(--cpp); }
+  .pill.ckm.active { background: var(--ckm); border-color: var(--ckm); }
+  .pill.tfw.active { background: var(--tfw); border-color: var(--tfw); }
+
+  /* ─── KPI CARDS ─── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 26px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    border-radius: 12px 12px 0 0;
+  }
+  .kpi.cpp::before { background: var(--cpp); }
+  .kpi.ckm::before { background: var(--ckm); }
+  .kpi.tfw::before { background: var(--tfw); }
+  .kpi.danger::before { background: var(--danger); }
+
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .8px; font-family: var(--mono); margin-bottom: 10px; }
+  .kpi-value { font-size: 32px; font-weight: 600; font-family: var(--mono); line-height: 1; }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .badge {
+    display: inline-flex; align-items: center;
+    background: rgba(255,215,0,.12);
+    color: var(--accent);
+    border-radius: 4px;
+    font-size: 11px; font-family: var(--mono);
+    padding: 2px 7px;
+    margin-top: 8px;
+  }
+  .badge.red { background: rgba(255,123,114,.12); color: var(--danger); }
+  .badge.green { background: rgba(63,185,80,.12); color: var(--tfw); }
+
+  /* ─── CHART ROW ─── */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .chart-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+  }
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 18px;
+    display: flex; align-items: center; gap: 8px;
+    color: var(--text);
+  }
+  .card-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  canvas { width: 100% !important; }
+
+  /* ─── TABLE ─── */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid rgba(48,54,61,.5);
+    white-space: nowrap;
+  }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+  .tag.cpp { background: rgba(88,166,255,.15); color: var(--cpp); }
+  .tag.ckm { background: rgba(247,129,102,.15); color: var(--ckm); }
+  .tag.tfw { background: rgba(63,185,80,.15); color: var(--tfw); }
+
+  .rate-bar {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .bar-track {
+    flex: 1; height: 4px;
+    background: var(--surface2);
+    border-radius: 4px;
+    overflow: hidden;
+    min-width: 60px;
+  }
+  .bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    transition: width .4s ease;
+  }
+
+  /* ─── EMPTY STATE ─── */
+  .empty {
+    text-align: center;
+    padding: 80px 20px;
+    color: var(--muted);
+  }
+  .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty h2 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+  .empty p { font-size: 14px; line-height: 1.6; }
+  .empty .upload-cta {
+    margin-top: 24px;
+    display: inline-flex;
+    align-items: center; gap: 8px;
+    background: var(--accent);
+    color: #000;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 14px;
+    border: none;
+    font-family: var(--font);
+  }
+
+  .footer-note {
+    text-align: center;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 40px;
+    font-family: var(--mono);
+  }
+
+  @media (max-width: 768px) {
+    main { padding: 20px 16px 50px; }
+    header { padding: 14px 16px; }
+    .chart-grid, .chart-grid-2 { grid-template-columns: 1fr; }
+    .kpi-value { font-size: 26px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">📊</div>
+    <div>
+      <h1>Turnover Rate Dashboard</h1>
+      <span id="fyLabel">— ยังไม่ได้โหลดข้อมูล</span>
     </div>
-  );
+  </div>
+  <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+    ⬆ อัพโหลด Excel ใหม่
+  </button>
+  <input type="file" id="fileInput" accept=".xlsx,.xls" onchange="handleFile(event)">
+</header>
+
+<main>
+  <div id="emptyState" class="empty">
+    <div class="empty-icon">📂</div>
+    <h2>โหลดข้อมูลเพื่อเริ่มต้น</h2>
+    <p>อัพโหลดไฟล์ Excel ที่มีข้อมูลอัตราการลาออก<br>รองรับ .xlsx และ .xls — ไม่มีวันหมดอายุ ใช้ได้ไม่จำกัด</p>
+    <button class="upload-cta" onclick="document.getElementById('fileInput').click()">⬆ เลือกไฟล์ Excel</button>
+  </div>
+
+  <div id="dashboard" style="display:none">
+    <!-- FILTERS -->
+    <div class="filters">
+      <span class="filter-label">SUBCONTRACT :</span>
+      <div class="pill-group" id="subFilter">
+        <button class="pill active" data-sub="ALL" onclick="filterSub('ALL', this)">ทั้งหมด</button>
+        <button class="pill cpp" data-sub="SUB CPP" onclick="filterSub('SUB CPP', this)">SUB CPP</button>
+        <button class="pill ckm" data-sub="SUB CKM" onclick="filterSub('SUB CKM', this)">SUB CKM</button>
+        <button class="pill tfw" data-sub="SUB TFW" onclick="filterSub('SUB TFW', this)">SUB TFW</button>
+      </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-grid" id="kpiGrid"></div>
+
+    <!-- CHART ROW 1 -->
+    <div class="chart-grid">
+      <div class="card">
+        <div class="card-title"><span class="dot"></span> Turnover % รายเดือน (แยกตาม Subcontract)</div>
+        <canvas id="lineChart" height="100"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--ckm)"></span> สัดส่วน Total Resign</div>
+        <canvas id="donutChart" height="180"></canvas>
+      </div>
+    </div>
+
+    <!-- CHART ROW 2 -->
+    <div class="chart-grid-2">
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--cpp)"></span> จำนวนการลาออก (Resign) รายเดือน</div>
+        <canvas id="barChart" height="130"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title"><span class="dot" style="background:var(--tfw)"></span> Headcount เฉลี่ย (Avg) รายเดือน</div>
+        <canvas id="avgChart" height="130"></canvas>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="card">
+      <div class="card-title"><span class="dot" style="background:var(--muted)"></span> ตารางข้อมูลทั้งหมด</div>
+      <div class="table-wrap">
+        <table id="dataTable">
+          <thead>
+            <tr>
+              <th>เดือน</th>
+              <th>Subcontract</th>
+              <th>Start HC</th>
+              <th>End HC</th>
+              <th>Avg HC</th>
+              <th>Resign</th>
+              <th>Turnover %</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-note" id="footerNote" style="display:none">
+    อัพเดทล่าสุด: <span id="lastUpdated">—</span> · ข้อมูลจากไฟล์ Excel ที่อัพโหลด · Dashboard นี้รันบน Client ไม่มีวันหมดอายุ
+  </div>
+</main>
+
+<script>
+const MONTHS_ORDER = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const SUB_COLORS = {
+  'SUB CPP': '#58a6ff',
+  'SUB CKM': '#f78166',
+  'SUB TFW': '#3fb950',
+};
+const SUB_CLASS = {
+  'SUB CPP': 'cpp',
+  'SUB CKM': 'ckm',
+  'SUB TFW': 'tfw',
 };
 
-export default function App() {
-  const [rows, setRows] = useState([]);
-  const [loaded, setLoaded] = useState(false);
-  const [tab, setTab] = useState("overview");
-  const [filter, setFilter] = useState("ALL");
-  const [showAdd, setShowAdd] = useState(false);
-  const [newRow, setNewRow] = useState({month:"JAN",sub:"SUB CPP",start:"",end:"",resign:""});
-  const [saveStatus, setSaveStatus] = useState("saved");
-  const saveTimer = useRef();
-  const fileRef = useRef();
+let allData = [];
+let charts = {};
+let currentSub = 'ALL';
 
-  // Load from persistent storage
-  useEffect(() => {
-    (async () => {
-      try {
-        const result = await window.storage.get("turnover_rows");
-        setRows(result?.value ? JSON.parse(result.value) : SEED);
-      } catch {
-        setRows(SEED);
-      }
-      setLoaded(true);
-    })();
-  }, []);
+// ─── LOAD DEMO DATA ───
+window.onload = () => {
+  // Load demo data from embedded JSON
+  loadEmbeddedData();
+};
 
-  // Auto-save on change
-  useEffect(() => {
-    if (!loaded) return;
-    setSaveStatus("saving");
-    clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(async () => {
-      try { await window.storage.set("turnover_rows", JSON.stringify(rows)); } catch {}
-      setSaveStatus("saved");
-    }, 800);
-  }, [rows, loaded]);
+const EMBEDDED = [
+  {fy:'FY2025',month:'JAN',sub:'SUB CPP',start:284,end:274,avg:279,resign:12,rate:4.30},
+  {fy:'FY2025',month:'JAN',sub:'SUB CKM',start:104,end:96,avg:100,resign:17,rate:17.00},
+  {fy:'FY2025',month:'JAN',sub:'SUB TFW',start:0,end:3,avg:1.5,resign:0,rate:0},
+  {fy:'FY2025',month:'FEB',sub:'SUB CPP',start:274,end:265,avg:269.5,resign:9,rate:3.34},
+  {fy:'FY2025',month:'FEB',sub:'SUB CKM',start:96,end:95,avg:95.5,resign:15,rate:15.71},
+  {fy:'FY2025',month:'FEB',sub:'SUB TFW',start:3,end:11,avg:7,resign:2,rate:28.57},
+  {fy:'FY2025',month:'MAR',sub:'SUB CPP',start:265,end:260,avg:262.5,resign:5,rate:1.90},
+  {fy:'FY2025',month:'MAR',sub:'SUB CKM',start:95,end:100,avg:97.5,resign:11,rate:11.28},
+  {fy:'FY2025',month:'MAR',sub:'SUB TFW',start:11,end:17,avg:14,resign:8,rate:57.14},
+  {fy:'FY2025',month:'APR',sub:'SUB CPP',start:260,end:253,avg:256.5,resign:10,rate:3.90},
+  {fy:'FY2025',month:'APR',sub:'SUB CKM',start:100,end:104,avg:102,resign:12,rate:11.76},
+  {fy:'FY2025',month:'APR',sub:'SUB TFW',start:17,end:19,avg:18,resign:11,rate:61.11},
+  {fy:'FY2025',month:'MAY',sub:'SUB CPP',start:253,end:261,avg:257,resign:7,rate:2.72},
+  {fy:'FY2025',month:'MAY',sub:'SUB CKM',start:104,end:138,avg:121,resign:14,rate:11.57},
+  {fy:'FY2025',month:'MAY',sub:'SUB TFW',start:19,end:44,avg:31.5,resign:24,rate:76.19},
+  {fy:'FY2025',month:'JUN',sub:'SUB CPP',start:261,end:248,avg:254.5,resign:13,rate:5.11},
+  {fy:'FY2025',month:'JUN',sub:'SUB CKM',start:138,end:145,avg:141.5,resign:23,rate:16.25},
+  {fy:'FY2025',month:'JUN',sub:'SUB TFW',start:44,end:50,avg:47,resign:15,rate:31.91},
+  {fy:'FY2025',month:'JUL',sub:'SUB CPP',start:248,end:246,avg:247,resign:2,rate:0.81},
+  {fy:'FY2025',month:'JUL',sub:'SUB CKM',start:145,end:152,avg:148.5,resign:24,rate:16.16},
+  {fy:'FY2025',month:'JUL',sub:'SUB TFW',start:50,end:52,avg:51,resign:19,rate:37.25},
+  {fy:'FY2025',month:'AUG',sub:'SUB CPP',start:246,end:242,avg:244,resign:4,rate:1.64},
+  {fy:'FY2025',month:'AUG',sub:'SUB CKM',start:152,end:158,avg:155,resign:13,rate:8.39},
+  {fy:'FY2025',month:'AUG',sub:'SUB TFW',start:52,end:57,avg:54.5,resign:12,rate:22.02},
+  {fy:'FY2025',month:'SEP',sub:'SUB CPP',start:242,end:241,avg:241.5,resign:1,rate:0.41},
+  {fy:'FY2025',month:'SEP',sub:'SUB CKM',start:158,end:151,avg:154.5,resign:18,rate:11.65},
+  {fy:'FY2025',month:'SEP',sub:'SUB TFW',start:57,end:64,avg:60.5,resign:4,rate:6.61},
+  {fy:'FY2025',month:'OCT',sub:'SUB CPP',start:241,end:237,avg:239,resign:4,rate:1.67},
+  {fy:'FY2025',month:'OCT',sub:'SUB CKM',start:151,end:161,avg:156,resign:14,rate:8.97},
+  {fy:'FY2025',month:'OCT',sub:'SUB TFW',start:64,end:66,avg:65,resign:15,rate:23.08},
+  {fy:'FY2025',month:'NOV',sub:'SUB CPP',start:237,end:235,avg:236,resign:2,rate:0.85},
+  {fy:'FY2025',month:'NOV',sub:'SUB CKM',start:161,end:178,avg:169.5,resign:11,rate:6.49},
+  {fy:'FY2025',month:'NOV',sub:'SUB TFW',start:66,end:69,avg:67.5,resign:9,rate:13.33},
+  {fy:'FY2025',month:'DEC',sub:'SUB CPP',start:235,end:234,avg:234.5,resign:1,rate:0.43},
+  {fy:'FY2025',month:'DEC',sub:'SUB CKM',start:178,end:174,avg:176,resign:5,rate:2.84},
+  {fy:'FY2025',month:'DEC',sub:'SUB TFW',start:69,end:70,avg:69.5,resign:3,rate:4.32},
+];
 
-  const data = calc(rows).sort((a,b) => MONTHS.indexOf(a.month)-MONTHS.indexOf(b.month) || a.sub.localeCompare(b.sub));
-  const activeMonths = MONTHS.filter(m => data.some(r => r.month===m));
-
-  const monthlyData = activeMonths.map(m => {
-    const obj = { month: m };
-    SUBS.forEach(s => {
-      const r = data.find(x => x.month===m && x.sub===s);
-      obj[s+"_to"] = r ? +r.turnover.toFixed(2) : null;
-      obj[s+"_re"] = r ? r.resign : 0;
-    });
-    return obj;
-  });
-
-  const totalResign = data.reduce((a,r) => a+r.resign, 0);
-  const totalAvg    = data.reduce((a,r) => a+r.avg, 0);
-  const overallTO   = totalAvg > 0 ? (totalResign/totalAvg)*100 : 0;
-
-  const subStats = SUBS.map(s => {
-    const rs = data.filter(r => r.sub===s);
-    const tr = rs.reduce((a,r) => a+r.resign, 0);
-    const ta = rs.reduce((a,r) => a+r.avg, 0);
-    return { sub:s, resign:tr, to: ta>0?(tr/ta)*100:0, peak: Math.max(...rs.map(r=>r.turnover), 0) };
-  });
-
-  function updateRow(id, field, val) {
-    setRows(prev => prev.map(r => r.id===id ? {...r, [field]: field==="month"||field==="sub" ? val : +val} : r));
-  }
-  function deleteRow(id) { setRows(prev => prev.filter(r => r.id!==id)); }
-  function addRow() {
-    if (newRow.resign==="") return;
-    setRows(prev => [...prev, {id:Date.now(), month:newRow.month, sub:newRow.sub, start:+newRow.start||0, end:+newRow.end||0, resign:+newRow.resign||0}]);
-    setNewRow({month:"JAN",sub:"SUB CPP",start:"",end:"",resign:""});
-    setShowAdd(false);
-  }
-  function handleCSV(e) {
-    const file = e.target.files[0]; if (!file) return;
-    const reader = new FileReader();
-    reader.onload = ev => {
-      const lines = ev.target.result.trim().split("\n");
-      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
-      const parsed = lines.slice(1).map((line,i) => {
-        const v = line.split(","); const o = {};
-        headers.forEach((h,j) => { o[h] = v[j]?.trim(); });
-        return { id:Date.now()+i, month:(o.month||o.fy2025||"").toUpperCase(), sub:(o.sub||o.subcontract||"").toUpperCase(), start:+o.start_headcount||+o.start||0, end:+o.end_headcount||+o.end||0, resign:+o.resign||0 };
-      }).filter(r => r.month && r.sub && MONTHS.includes(r.month) && SUBS.includes(r.sub));
-      if (parsed.length>0) setRows(parsed);
-    };
-    reader.readAsText(file); e.target.value="";
-  }
-
-  const tableRows = filter==="ALL" ? data : data.filter(r => r.sub===filter);
-
-  const pill = (to) => ({
-    display:"inline-block", padding:"2px 8px", borderRadius:4, fontWeight:700, fontFamily:"monospace", fontSize:12,
-    background: to>30?"#f8717120":to>10?"#fbbf2420":"#34d39920",
-    color: to>30?"#f87171":to>10?"#fbbf24":"#34d399"
-  });
-
-  const subTagStyle = { "SUB CPP":{background:"#38bdf820",color:"#38bdf8"}, "SUB CKM":{background:"#fb923c20",color:"#fb923c"}, "SUB TFW":{background:"#f472b620",color:"#f472b6"} };
-
-  const inp = { background:"transparent", border:"1px solid transparent", color:"#dce8ff", textAlign:"right", width:76, padding:"2px 4px", borderRadius:4, fontSize:13, fontFamily:"monospace", outline:"none" };
-
-  if (!loaded) return <div style={{background:"#04080f",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#3d5070",fontFamily:"sans-serif"}}>กำลังโหลด...</div>;
-
-  return (
-    <div style={{fontFamily:"'DM Sans','Segoe UI',sans-serif",background:"#04080f",minHeight:"100vh",color:"#dce8ff"}}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}} input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}`}</style>
-
-      {/* Header */}
-      <div style={{background:"#080e1aee",backdropFilter:"blur(12px)",borderBottom:"1px solid #162040",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#1d3b7a,#38bdf8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>📊</div>
-          <div>
-            <div style={{fontSize:14,fontWeight:700,letterSpacing:"-0.3px"}}>Turnover Rate Dashboard</div>
-            <div style={{fontSize:10,color:"#3d5070",fontFamily:"monospace"}}>FY2025 · Subcontractor Analytics</div>
-          </div>
-        </div>
-        <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{fontSize:11,color:saveStatus==="saving"?"#fbbf24":"#34d399",fontFamily:"monospace",display:"flex",alignItems:"center",gap:5}}>
-            <span style={{width:6,height:6,borderRadius:"50%",background:saveStatus==="saving"?"#fbbf24":"#34d399",display:"inline-block",animation:"pulse 2s infinite"}}/>
-            {saveStatus==="saving"?"กำลังบันทึก...":"บันทึกแล้ว"}
-          </div>
-          <label style={{cursor:"pointer",padding:"6px 12px",background:"#0d1628",border:"1px solid #1e2d52",borderRadius:7,fontSize:11,color:"#6b82aa",display:"flex",alignItems:"center",gap:5}}>
-            📂 Import CSV<input ref={fileRef} type="file" accept=".csv" style={{display:"none"}} onChange={handleCSV}/>
-          </label>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div style={{display:"flex",gap:2,padding:"0 24px",background:"#04080f",borderBottom:"1px solid #162040"}}>
-        {[["overview","📊 Overview"],["trends","📈 Trends"],["table","🔍 ข้อมูล"]].map(([k,label]) => (
-          <button key={k} onClick={()=>setTab(k)} style={{padding:"11px 18px",fontSize:12,fontWeight:600,color:tab===k?"#38bdf8":"#3d5070",background:"transparent",border:"none",borderBottom:tab===k?"2px solid #38bdf8":"2px solid transparent",cursor:"pointer",letterSpacing:.3,transition:"all .15s"}}>{label}</button>
-        ))}
-      </div>
-
-      <div style={{padding:"20px 24px"}}>
-        {/* KPI Row */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(175px,1fr))",gap:12,marginBottom:20}}>
-          <div style={{padding:"16px 18px",borderRadius:12,border:"1px solid #4f8ef740",background:"linear-gradient(135deg,#0d1628,#111e3a)",borderLeft:"3px solid #4f8ef7"}}>
-            <div style={{fontSize:10,color:"#6b82aa",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Overall Turnover</div>
-            <div style={{fontSize:28,fontWeight:800,color:"#4f8ef7",letterSpacing:"-1px",lineHeight:1}}>{overallTO.toFixed(1)}<span style={{fontSize:15,color:"#6b82aa"}}>%</span></div>
-            <div style={{fontSize:11,color:"#3d5070",marginTop:4,fontFamily:"monospace"}}>{activeMonths.length} เดือน · FY2025</div>
-          </div>
-          <div style={{padding:"16px 18px",borderRadius:12,border:"1px solid #fbbf2440",background:"#080e1a",borderLeft:"3px solid #fbbf24"}}>
-            <div style={{fontSize:10,color:"#6b82aa",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Total Resign</div>
-            <div style={{fontSize:28,fontWeight:800,color:"#fbbf24",letterSpacing:"-1px",lineHeight:1}}>{totalResign}<span style={{fontSize:15,color:"#6b82aa"}}> คน</span></div>
-            <div style={{fontSize:11,color:"#3d5070",marginTop:4,fontFamily:"monospace"}}>ทุก Subcontractor</div>
-          </div>
-          {subStats.map(ss => (
-            <div key={ss.sub} style={{padding:"16px 18px",borderRadius:12,border:`1px solid ${C[ss.sub]}40`,background:"#080e1a",borderLeft:`3px solid ${C[ss.sub]}`}}>
-              <div style={{fontSize:10,color:C[ss.sub],textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>{ss.sub}</div>
-              <div style={{fontSize:28,fontWeight:800,color:C[ss.sub],letterSpacing:"-1px",lineHeight:1}}>{ss.to.toFixed(1)}<span style={{fontSize:15,color:"#6b82aa"}}>%</span></div>
-              <div style={{fontSize:11,color:"#3d5070",marginTop:4,fontFamily:"monospace"}}>{ss.resign} ลาออก · Peak {ss.peak.toFixed(1)}%</div>
-            </div>
-          ))}
-        </div>
-
-        {/* OVERVIEW */}
-        {tab==="overview" && (
-          <div style={{display:"grid",gap:14}}>
-            <div style={{background:"#080e1a",border:"1px solid #162040",borderRadius:12,padding:18}}>
-              <div style={{fontSize:11,fontWeight:600,color:"#6b82aa",textTransform:"uppercase",letterSpacing:.8,marginBottom:14}}>Monthly Turnover Rate (%) — แยก Subcontractor</div>
-              <ResponsiveContainer width="100%" height={240}>
-                <LineChart data={monthlyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#162040"/>
-                  <XAxis dataKey="month" tick={{fill:"#3d5070",fontSize:11}}/>
-                  <YAxis tick={{fill:"#3d5070",fontSize:11}} unit="%"/>
-                  <Tooltip content={<Tip/>}/>
-                  <Legend wrapperStyle={{fontSize:12}}/>
-                  {SUBS.map(s => <Line key={s} type="monotone" dataKey={s+"_to"} name={s} stroke={C[s]} strokeWidth={2.5} dot={{r:4}} connectNulls/>)}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-              <div style={{background:"#080e1a",border:"1px solid #162040",borderRadius:12,padding:18}}>
-                <div style={{fontSize:11,fontWeight:600,color:"#6b82aa",textTransform:"uppercase",letterSpacing:.8,marginBottom:14}}>Resign รายเดือน</div>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={monthlyData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#162040"/>
-                    <XAxis dataKey="month" tick={{fill:"#3d5070",fontSize:10}}/>
-                    <YAxis tick={{fill:"#3d5070",fontSize:10}}/>
-                    <Tooltip content={<Tip/>}/>
-                    <Legend wrapperStyle={{fontSize:11}}/>
-                    {SUBS.map(s => <Bar key={s} dataKey={s+"_re"} name={s} stackId="a" fill={C[s]} fillOpacity={0.8}/>)}
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              <div style={{background:"#080e1a",border:"1px solid #162040",borderRadius:12,padding:18}}>
-                <div style={{fontSize:11,fontWeight:600,color:"#6b82aa",textTransform:"uppercase",letterSpacing:.8,marginBottom:14}}>Peak Resign Month</div>
-                <div style={{display:"grid",gap:8,marginTop:4}}>
-                  {subStats.map(ss => {
-                    const peak = data.filter(r=>r.sub===ss.sub).sort((a,b)=>b.turnover-a.turnover)[0];
-                    return (
-                      <div key={ss.sub} style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"10px 12px",background:"#04080f",borderRadius:8,border:`1px solid ${C[ss.sub]}30`}}>
-                        <span style={{fontSize:12,fontWeight:700,color:C[ss.sub]}}>{ss.sub}</span>
-                        <span style={{fontSize:12,color:"#6b82aa",fontFamily:"monospace"}}>{peak?.month} · {peak?.resign} คน</span>
-                        <span style={pill(ss.peak)}>{ss.peak.toFixed(1)}%</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* TRENDS */}
-        {tab==="trends" && (
-          <div style={{display:"grid",gap:14}}>
-            {SUBS.map(sub => {
-              const subData = data.filter(r=>r.sub===sub).sort((a,b)=>MONTHS.indexOf(a.month)-MONTHS.indexOf(b.month));
-              return (
-                <div key={sub} style={{background:"#080e1a",border:"1px solid #162040",borderRadius:12,padding:18,borderLeft:`3px solid ${C[sub]}`}}>
-                  <div style={{fontSize:11,fontWeight:600,color:C[sub],textTransform:"uppercase",letterSpacing:.8,marginBottom:14}}>{sub} — Monthly Trend</div>
-                  <ResponsiveContainer width="100%" height={180}>
-                    <BarChart data={subData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#162040"/>
-                      <XAxis dataKey="month" tick={{fill:"#3d5070",fontSize:11}}/>
-                      <YAxis tick={{fill:"#3d5070",fontSize:11}} unit="%"/>
-                      <Tooltip content={<Tip/>}/>
-                      <Bar dataKey="turnover" name="Turnover %" radius={[4,4,0,0]}>
-                        {subData.map((entry,i) => <Cell key={i} fill={entry.turnover>30?"#f87171":C[sub]} fillOpacity={entry.turnover>30?1:0.75}/>)}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* TABLE */}
-        {tab==="table" && (
-          <div>
-            <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center",flexWrap:"wrap"}}>
-              {["ALL",...SUBS].map(f => (
-                <button key={f} onClick={()=>setFilter(f)} style={{padding:"6px 14px",borderRadius:20,border:`1px solid ${f==="ALL"?"#1e2d52":C[f]+"60"}`,background:filter===f?(f==="ALL"?"#1e2d52":C[f]+"25"):"transparent",color:filter===f?(f==="ALL"?"#dce8ff":C[f]):"#3d5070",cursor:"pointer",fontSize:12,fontWeight:600,transition:"all .15s"}}>{f}</button>
-              ))}
-              <button onClick={()=>setShowAdd(v=>!v)} style={{marginLeft:"auto",padding:"7px 14px",background:"linear-gradient(135deg,#1d3b7a,#38bdf8)",border:"none",borderRadius:8,color:"#fff",cursor:"pointer",fontSize:12,fontWeight:700}}>+ เพิ่มแถว</button>
-            </div>
-
-            {showAdd && (
-              <div style={{background:"#080e1a",border:"1px solid #38bdf840",borderRadius:10,padding:"14px 16px",marginBottom:12,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"}}>
-                {[{k:"month",label:"Month",type:"sel",opts:MONTHS},{k:"sub",label:"Sub",type:"sel",opts:SUBS},{k:"start",label:"Start HC"},{k:"end",label:"End HC"},{k:"resign",label:"Resign"}].map(f => (
-                  <div key={f.k}>
-                    <div style={{fontSize:10,color:"#6b82aa",marginBottom:4}}>{f.label}</div>
-                    {f.type==="sel"
-                      ? <select value={newRow[f.k]} onChange={e=>setNewRow(r=>({...r,[f.k]:e.target.value}))} style={{background:"#0d1628",border:"1px solid #1e2d52",color:"#dce8ff",borderRadius:6,padding:"7px 10px",fontSize:12}}>
-                          {f.opts.map(o => <option key={o}>{o}</option>)}
-                        </select>
-                      : <input type="number" value={newRow[f.k]} onChange={e=>setNewRow(r=>({...r,[f.k]:e.target.value}))} placeholder="0" style={{background:"#0d1628",border:"1px solid #1e2d52",color:"#dce8ff",borderRadius:6,padding:"7px 10px",fontSize:12,width:80,fontFamily:"monospace"}}/>
-                    }
-                  </div>
-                ))}
-                <button onClick={addRow} style={{padding:"7px 14px",background:"#38bdf8",border:"none",borderRadius:7,color:"#04080f",fontSize:12,fontWeight:700,cursor:"pointer"}}>เพิ่ม</button>
-                <button onClick={()=>setShowAdd(false)} style={{padding:"7px 12px",background:"transparent",border:"1px solid #1e2d52",borderRadius:7,color:"#6b82aa",fontSize:12,cursor:"pointer"}}>ยกเลิก</button>
-              </div>
-            )}
-
-            <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #162040"}}>
-              <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-                <thead>
-                  <tr>
-                    {["Month","Sub","Start HC","End HC","Avg HC","Resign","Turnover %",""].map((h,i) => (
-                      <th key={i} style={{padding:"9px 12px",background:"#0d1628",color:"#3d5070",fontWeight:600,fontSize:10,textTransform:"uppercase",letterSpacing:.8,textAlign:i<2?"left":"right",borderBottom:"1px solid #162040",whiteSpace:"nowrap"}}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {tableRows.map((row,i) => (
-                    <tr key={row.id} style={{background:i%2===0?"#04080f":"#06090f",borderBottom:"1px solid #0d1628"}}>
-                      <td style={{padding:"8px 12px",fontFamily:"monospace",color:"#6b82aa",fontWeight:600}}>{row.month}</td>
-                      <td style={{padding:"8px 12px"}}><span style={{padding:"2px 8px",borderRadius:4,fontSize:11,fontWeight:700,...subTagStyle[row.sub]}}>{row.sub}</span></td>
-                      {["start","end"].map(f => (
-                        <td key={f} style={{padding:"8px 12px",textAlign:"right"}}>
-                          <input type="number" value={row[f]} onChange={e=>updateRow(row.id,f,e.target.value)} style={inp}
-                            onFocus={e=>{e.target.style.borderColor="#38bdf8";e.target.style.background="#0d1628";}}
-                            onBlur={e=>{e.target.style.borderColor="transparent";e.target.style.background="transparent";}}/>
-                        </td>
-                      ))}
-                      <td style={{padding:"8px 12px",textAlign:"right",fontFamily:"monospace",color:"#6b82aa"}}>{row.avg.toFixed(1)}</td>
-                      <td style={{padding:"8px 12px",textAlign:"right"}}>
-                        <input type="number" value={row.resign} onChange={e=>updateRow(row.id,"resign",e.target.value)} style={inp}
-                          onFocus={e=>{e.target.style.borderColor="#38bdf8";e.target.style.background="#0d1628";}}
-                          onBlur={e=>{e.target.style.borderColor="transparent";e.target.style.background="transparent";}}/>
-                      </td>
-                      <td style={{padding:"8px 12px",textAlign:"right"}}><span style={pill(row.turnover)}>{row.turnover.toFixed(2)}%</span></td>
-                      <td style={{padding:"8px 12px",textAlign:"right"}}>
-                        <button onClick={()=>deleteRow(row.id)} style={{background:"transparent",border:"1px solid #f8717130",color:"#f87171",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:11}}>✕</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <p style={{fontSize:11,color:"#1e2d52",marginTop:8}}>💡 คลิกตัวเลขเพื่อแก้ไข · ข้อมูลถูกบันทึกอัตโนมัติ และจะยังคงอยู่เมื่อกลับมาใช้งานอีกครั้ง</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
+function loadEmbeddedData() {
+  allData = EMBEDDED;
+  document.getElementById('fyLabel').textContent = 'FY2025 (ข้อมูลตัวอย่าง)';
+  document.getElementById('lastUpdated').textContent = 'ข้อมูลตัวอย่างในตัว';
+  renderDashboard();
 }
+
+// ─── FILE UPLOAD ───
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'binary' });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const raw = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+      parseAndLoad(raw, file.name);
+    } catch(err) {
+      alert('ไม่สามารถอ่านไฟล์ได้: ' + err.message);
+    }
+  };
+  reader.readAsBinaryString(file);
+  e.target.value = '';
+}
+
+function parseAndLoad(raw, filename) {
+  const data = [];
+  const months = new Set(MONTHS_ORDER);
+  let fy = 'FY';
+
+  for (let r of raw) {
+    if (!r || !r[0] || !r[1]) continue;
+    const monthVal = String(r[0]).trim().toUpperCase();
+    const sub = String(r[1]).trim().toUpperCase();
+    if (!months.has(monthVal)) {
+      if (String(r[0]).startsWith('FY')) fy = String(r[0]).trim();
+      continue;
+    }
+    if (!sub.startsWith('SUB')) continue;
+    const start = parseFloat(r[2]) || 0;
+    const end = parseFloat(r[3]) || 0;
+    const avg = parseFloat(r[4]) || (start+end)/2;
+    const resign = parseFloat(r[5]) || 0;
+    const rate = parseFloat(r[6]) || (avg > 0 ? resign/avg*100 : 0);
+    data.push({ fy, month: monthVal, sub, start, end, avg, resign, rate });
+  }
+
+  if (data.length === 0) {
+    alert('ไม่พบข้อมูลในรูปแบบที่คาดหวัง\nโปรดตรวจสอบว่าคอลัมน์เป็น: FY, Subcontract, Start_HC, End_HC, Avg, Resign, Turnover%');
+    return;
+  }
+
+  allData = data;
+  const fySet = [...new Set(data.map(d => d.fy))].join(', ');
+  document.getElementById('fyLabel').textContent = fySet + ' · ' + filename;
+  document.getElementById('lastUpdated').textContent = new Date().toLocaleString('th-TH');
+  renderDashboard();
+}
+
+// ─── FILTER ───
+function filterSub(sub, btn) {
+  currentSub = sub;
+  document.querySelectorAll('#subFilter .pill').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  renderDashboard();
+}
+
+function getFiltered() {
+  if (currentSub === 'ALL') return allData;
+  return allData.filter(d => d.sub === currentSub);
+}
+
+// ─── RENDER ───
+function renderDashboard() {
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('dashboard').style.display = 'block';
+  document.getElementById('footerNote').style.display = 'block';
+
+  const filtered = getFiltered();
+  renderKPIs(filtered);
+  renderLineChart(filtered);
+  renderDonut(filtered);
+  renderBarChart(filtered);
+  renderAvgChart(filtered);
+  renderTable(filtered);
+}
+
+function fmt(n, d=2) { return isFinite(n) ? n.toFixed(d) : '0.00'; }
+
+function renderKPIs(data) {
+  const totalResign = data.reduce((s,d) => s+d.resign, 0);
+  const avgRate = data.reduce((s,d) => s+d.rate, 0) / (data.length || 1);
+  const maxRate = Math.max(...data.map(d => d.rate));
+  const maxRow = data.find(d => d.rate === maxRate);
+  const latestMonth = MONTHS_ORDER.filter(m => data.some(d => d.month === m)).pop() || '—';
+  const latestHC = data.filter(d => d.month === latestMonth).reduce((s,d) => s+d.end, 0);
+
+  document.getElementById('kpiGrid').innerHTML = `
+    <div class="kpi">
+      <div class="kpi-label">Total Resign</div>
+      <div class="kpi-value">${totalResign}</div>
+      <div class="kpi-sub">คน (ทั้งปี)</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Avg Turnover Rate</div>
+      <div class="kpi-value">${fmt(avgRate)}%</div>
+      <div class="kpi-sub">เฉลี่ยต่อเดือน</div>
+      <div class="badge ${avgRate > 15 ? 'red' : avgRate > 8 ? '' : 'green'}">${avgRate > 15 ? '⚠ สูง' : avgRate > 8 ? '~ ปานกลาง' : '✓ ต่ำ'}</div>
+    </div>
+    <div class="kpi danger">
+      <div class="kpi-label">Peak Turnover</div>
+      <div class="kpi-value">${fmt(maxRate)}%</div>
+      <div class="kpi-sub">${maxRow ? maxRow.month + ' · ' + maxRow.sub : '—'}</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">End Headcount (${latestMonth})</div>
+      <div class="kpi-value">${latestHC}</div>
+      <div class="kpi-sub">ล่าสุด</div>
+    </div>
+  `;
+}
+
+function getMonths(data) {
+  return MONTHS_ORDER.filter(m => data.some(d => d.month === m));
+}
+
+function destroyChart(id) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+}
+
+function renderLineChart(data) {
+  destroyChart('line');
+  const months = getMonths(data);
+  const subs = currentSub === 'ALL' ? ['SUB CPP','SUB CKM','SUB TFW'] : [currentSub];
+
+  const datasets = subs.map(sub => ({
+    label: sub,
+    data: months.map(m => {
+      const row = data.find(d => d.month === m && d.sub === sub);
+      return row ? +row.rate.toFixed(2) : null;
+    }),
+    borderColor: SUB_COLORS[sub],
+    backgroundColor: SUB_COLORS[sub] + '22',
+    tension: 0.4,
+    fill: false,
+    pointRadius: 5,
+    pointHoverRadius: 7,
+    borderWidth: 2,
+    spanGaps: true,
+  }));
+
+  charts['line'] = new Chart(document.getElementById('lineChart'), {
+    type: 'line',
+    data: { labels: months, datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#8b949e', font: { size: 11 } } },
+        tooltip: { backgroundColor: '#1c2330', borderColor: '#30363d', borderWidth: 1, titleColor: '#e6edf3', bodyColor: '#8b949e' }
+      },
+      scales: {
+        x: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: '#21262d' } },
+        y: { ticks: { color: '#8b949e', font: { size: 11 }, callback: v => v+'%' }, grid: { color: '#21262d' } }
+      }
+    }
+  });
+}
+
+function renderDonut(data) {
+  destroyChart('donut');
+  const resign = {};
+  data.forEach(d => { resign[d.sub] = (resign[d.sub]||0) + d.resign; });
+  const labels = Object.keys(resign);
+  const values = labels.map(k => resign[k]);
+
+  charts['donut'] = new Chart(document.getElementById('donutChart'), {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data: values,
+        backgroundColor: labels.map(l => SUB_COLORS[l] || '#8b949e'),
+        borderColor: '#161b22',
+        borderWidth: 3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: '#8b949e', font: { size: 11 }, padding: 12 } },
+        tooltip: { backgroundColor: '#1c2330', borderColor: '#30363d', borderWidth: 1, titleColor: '#e6edf3', bodyColor: '#8b949e' }
+      },
+      cutout: '65%'
+    }
+  });
+}
+
+function renderBarChart(data) {
+  destroyChart('bar');
+  const months = getMonths(data);
+  const subs = currentSub === 'ALL' ? ['SUB CPP','SUB CKM','SUB TFW'] : [currentSub];
+
+  const datasets = subs.map(sub => ({
+    label: sub,
+    data: months.map(m => {
+      const row = data.find(d => d.month === m && d.sub === sub);
+      return row ? row.resign : 0;
+    }),
+    backgroundColor: SUB_COLORS[sub] + 'bb',
+    borderColor: SUB_COLORS[sub],
+    borderWidth: 1,
+    borderRadius: 4,
+  }));
+
+  charts['bar'] = new Chart(document.getElementById('barChart'), {
+    type: 'bar',
+    data: { labels: months, datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#8b949e', font: { size: 11 } } },
+        tooltip: { backgroundColor: '#1c2330', borderColor: '#30363d', borderWidth: 1, titleColor: '#e6edf3', bodyColor: '#8b949e' }
+      },
+      scales: {
+        x: { stacked: false, ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: '#21262d' } },
+        y: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: '#21262d' } }
+      }
+    }
+  });
+}
+
+function renderAvgChart(data) {
+  destroyChart('avg');
+  const months = getMonths(data);
+  const subs = currentSub === 'ALL' ? ['SUB CPP','SUB CKM','SUB TFW'] : [currentSub];
+
+  const datasets = subs.map(sub => ({
+    label: sub,
+    data: months.map(m => {
+      const row = data.find(d => d.month === m && d.sub === sub);
+      return row ? +row.avg.toFixed(1) : null;
+    }),
+    borderColor: SUB_COLORS[sub],
+    backgroundColor: 'transparent',
+    tension: 0.3,
+    borderWidth: 2,
+    pointRadius: 3,
+    spanGaps: true,
+  }));
+
+  charts['avg'] = new Chart(document.getElementById('avgChart'), {
+    type: 'line',
+    data: { labels: months, datasets },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { labels: { color: '#8b949e', font: { size: 11 } } },
+        tooltip: { backgroundColor: '#1c2330', borderColor: '#30363d', borderWidth: 1, titleColor: '#e6edf3', bodyColor: '#8b949e' }
+      },
+      scales: {
+        x: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: '#21262d' } },
+        y: { ticks: { color: '#8b949e', font: { size: 11 } }, grid: { color: '#21262d' } }
+      }
+    }
+  });
+}
+
+function renderTable(data) {
+  const maxRate = Math.max(...data.map(d => d.rate), 1);
+  const sorted = [...data].sort((a,b) => {
+    const mi = m => MONTHS_ORDER.indexOf(m);
+    return mi(a.month) - mi(b.month) || a.sub.localeCompare(b.sub);
+  });
+
+  document.getElementById('tableBody').innerHTML = sorted.map(d => {
+    const cls = SUB_CLASS[d.sub] || '';
+    const barW = Math.min((d.rate / maxRate) * 100, 100).toFixed(1);
+    const color = SUB_COLORS[d.sub] || '#8b949e';
+    return `<tr>
+      <td style="font-family:var(--mono);font-weight:600">${d.month}</td>
+      <td><span class="tag ${cls}">${d.sub}</span></td>
+      <td>${d.start.toLocaleString()}</td>
+      <td>${d.end.toLocaleString()}</td>
+      <td>${(+d.avg.toFixed(1)).toLocaleString()}</td>
+      <td style="font-family:var(--mono)">${d.resign}</td>
+      <td>
+        <div class="rate-bar">
+          <span style="font-family:var(--mono);min-width:52px">${fmt(d.rate)}%</span>
+          <div class="bar-track"><div class="bar-fill" style="width:${barW}%;background:${color}"></div></div>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+</script>
+</body>
+</html>
