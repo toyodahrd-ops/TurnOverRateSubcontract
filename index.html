@@ -1,1 +1,425 @@
+import { useState, useRef, useCallback } from "react";
+import {
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer, RadarChart, Radar,
+  PolarGrid, PolarAngleAxis, PolarRadiusAxis, Cell
+} from "recharts";
 
+const MONTHS_ORDER = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+const SUBCONTRACTORS = ["SUB CPP", "SUB CKM", "SUB TFW"];
+const COLORS = { "SUB CPP": "#3b82f6", "SUB CKM": "#f59e0b", "SUB TFW": "#ef4444" };
+const COLORS_LIGHT = { "SUB CPP": "#dbeafe", "SUB CKM": "#fef3c7", "SUB TFW": "#fee2e2" };
+
+const DEFAULT_DATA = [
+  { month:"JAN", sub:"SUB CPP", start:284, end:274, avg:279, resign:12 },
+  { month:"JAN", sub:"SUB CKM", start:104, end:96, avg:100, resign:17 },
+  { month:"JAN", sub:"SUB TFW", start:0, end:3, avg:1.5, resign:0 },
+  { month:"FEB", sub:"SUB CPP", start:274, end:265, avg:269.5, resign:9 },
+  { month:"FEB", sub:"SUB CKM", start:96, end:95, avg:95.5, resign:15 },
+  { month:"FEB", sub:"SUB TFW", start:3, end:11, avg:7, resign:2 },
+  { month:"MAR", sub:"SUB CPP", start:265, end:260, avg:262.5, resign:5 },
+  { month:"MAR", sub:"SUB CKM", start:95, end:100, avg:97.5, resign:11 },
+  { month:"MAR", sub:"SUB TFW", start:11, end:17, avg:14, resign:8 },
+  { month:"APR", sub:"SUB CPP", start:260, end:253, avg:256.5, resign:10 },
+  { month:"APR", sub:"SUB CKM", start:100, end:104, avg:102, resign:12 },
+  { month:"APR", sub:"SUB TFW", start:17, end:19, avg:18, resign:11 },
+  { month:"MAY", sub:"SUB CPP", start:253, end:261, avg:257, resign:7 },
+  { month:"MAY", sub:"SUB CKM", start:104, end:138, avg:121, resign:14 },
+  { month:"MAY", sub:"SUB TFW", start:19, end:44, avg:31.5, resign:24 },
+  { month:"JUN", sub:"SUB CPP", start:261, end:248, avg:254.5, resign:13 },
+  { month:"JUN", sub:"SUB CKM", start:138, end:145, avg:141.5, resign:23 },
+  { month:"JUN", sub:"SUB TFW", start:44, end:50, avg:47, resign:15 },
+  { month:"JUL", sub:"SUB CPP", start:248, end:246, avg:247, resign:2 },
+  { month:"JUL", sub:"SUB CKM", start:145, end:152, avg:148.5, resign:24 },
+  { month:"JUL", sub:"SUB TFW", start:50, end:52, avg:51, resign:19 },
+  { month:"AUG", sub:"SUB CPP", start:246, end:242, avg:244, resign:4 },
+  { month:"AUG", sub:"SUB CKM", start:152, end:158, avg:155, resign:13 },
+  { month:"AUG", sub:"SUB TFW", start:52, end:57, avg:54.5, resign:12 },
+  { month:"SEP", sub:"SUB CPP", start:242, end:241, avg:241.5, resign:1 },
+  { month:"SEP", sub:"SUB CKM", start:158, end:151, avg:154.5, resign:18 },
+  { month:"SEP", sub:"SUB TFW", start:57, end:64, avg:60.5, resign:4 },
+  { month:"OCT", sub:"SUB CPP", start:241, end:237, avg:239, resign:4 },
+  { month:"OCT", sub:"SUB CKM", start:151, end:161, avg:156, resign:14 },
+  { month:"OCT", sub:"SUB TFW", start:64, end:66, avg:65, resign:15 },
+  { month:"NOV", sub:"SUB CPP", start:237, end:235, avg:236, resign:2 },
+  { month:"NOV", sub:"SUB CKM", start:161, end:178, avg:169.5, resign:11 },
+  { month:"NOV", sub:"SUB TFW", start:66, end:69, avg:67.5, resign:9 },
+  { month:"DEC", sub:"SUB CPP", start:235, end:234, avg:234.5, resign:1 },
+  { month:"DEC", sub:"SUB CKM", start:178, end:174, avg:176, resign:5 },
+  { month:"DEC", sub:"SUB TFW", start:69, end:70, avg:69.5, resign:3 },
+];
+
+function calcTurnover(resign, avg) {
+  if (!avg || avg === 0) return 0;
+  return (resign / avg) * 100;
+}
+
+function processData(rows) {
+  // Filter valid rows
+  const valid = rows.filter(r => r.month && r.sub && MONTHS_ORDER.includes(r.month.toUpperCase()) && SUBCONTRACTORS.includes(r.sub.toUpperCase()));
+  valid.forEach(r => {
+    r.month = r.month.toUpperCase();
+    r.sub = r.sub.toUpperCase();
+    r.turnover = calcTurnover(r.resign, r.avg);
+  });
+  return valid;
+}
+
+const CustomTooltip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 8, padding: "10px 14px", fontSize: 13 }}>
+      <p style={{ color: "#94a3b8", marginBottom: 4, fontWeight: 600 }}>{label}</p>
+      {payload.map((p, i) => (
+        <p key={i} style={{ color: p.color, margin: "2px 0" }}>
+          {p.name}: <b>{typeof p.value === "number" ? p.value.toFixed(2) : p.value}{p.name.includes("%") || p.name.includes("Turnover") ? "%" : ""}</b>
+        </p>
+      ))}
+    </div>
+  );
+};
+
+export default function TurnoverDashboard() {
+  const [data, setData] = useState(() => processData(DEFAULT_DATA));
+  const [editRows, setEditRows] = useState(DEFAULT_DATA.map(r => ({ ...r })));
+  const [tab, setTab] = useState("overview");
+  const [filterSub, setFilterSub] = useState("ALL");
+  const [showAdd, setShowAdd] = useState(false);
+  const [newRow, setNewRow] = useState({ month: "JAN", sub: "SUB CPP", start: "", end: "", avg: "", resign: "" });
+  const fileRef = useRef();
+
+  const processed = processData(editRows);
+
+  // Aggregate by month
+  const monthlyData = MONTHS_ORDER.map(m => {
+    const rows = processed.filter(r => r.month === m);
+    const obj = { month: m };
+    SUBCONTRACTORS.forEach(s => {
+      const r = rows.find(x => x.sub === s);
+      obj[s + "_turnover"] = r ? +r.turnover.toFixed(2) : null;
+      obj[s + "_resign"] = r ? r.resign : null;
+      obj[s + "_avg"] = r ? r.avg : null;
+    });
+    obj.total_resign = rows.reduce((a, r) => a + (r.resign || 0), 0);
+    obj.total_avg = rows.reduce((a, r) => a + (r.avg || 0), 0);
+    obj.overall_turnover = obj.total_avg > 0 ? +((obj.total_resign / obj.total_avg) * 100).toFixed(2) : 0;
+    return obj;
+  }).filter(m => processed.some(r => r.month === m.month));
+
+  // Summary cards
+  const summaryBySub = SUBCONTRACTORS.map(s => {
+    const rows = processed.filter(r => r.sub === s);
+    const totalResign = rows.reduce((a, r) => a + (r.resign || 0), 0);
+    const totalAvg = rows.reduce((a, r) => a + (r.avg || 0), 0);
+    const avgTurnover = totalAvg > 0 ? (totalResign / totalAvg) * 100 : 0;
+    const maxTurnover = rows.length ? Math.max(...rows.map(r => r.turnover)) : 0;
+    return { sub: s, totalResign, avgTurnover, maxTurnover, months: rows.length };
+  });
+
+  const overallResign = summaryBySub.reduce((a, s) => a + s.totalResign, 0);
+  const overallAvgHC = processed.reduce((a, r) => a + (r.avg || 0), 0);
+  const overallTurnover = overallAvgHC > 0 ? (overallResign / overallAvgHC) * 100 : 0;
+
+  // Radar data
+  const radarData = MONTHS_ORDER.filter(m => processed.some(r => r.month === m)).map(m => {
+    const obj = { month: m };
+    SUBCONTRACTORS.forEach(s => {
+      const r = processed.find(x => x.month === m && x.sub === s);
+      obj[s] = r ? +r.turnover.toFixed(2) : 0;
+    });
+    return obj;
+  });
+
+  // Table data
+  const tableData = processed
+    .filter(r => filterSub === "ALL" || r.sub === filterSub)
+    .sort((a, b) => MONTHS_ORDER.indexOf(a.month) - MONTHS_ORDER.indexOf(b.month) || a.sub.localeCompare(b.sub));
+
+  function handleDeleteRow(idx) {
+    const updated = editRows.filter((_, i) => i !== idx);
+    setEditRows(updated);
+  }
+
+  function handleAddRow() {
+    if (!newRow.month || !newRow.sub || newRow.resign === "") return;
+    const avg = newRow.avg !== "" ? +newRow.avg : ((+newRow.start + +newRow.end) / 2);
+    setEditRows([...editRows, { ...newRow, start: +newRow.start, end: +newRow.end, avg, resign: +newRow.resign }]);
+    setNewRow({ month: "JAN", sub: "SUB CPP", start: "", end: "", avg: "", resign: "" });
+    setShowAdd(false);
+  }
+
+  function handleEditCell(rowIdx, field, value) {
+    const updated = [...editRows];
+    updated[rowIdx] = { ...updated[rowIdx], [field]: field === "month" || field === "sub" ? value : +value };
+    if (field === "start" || field === "end") {
+      updated[rowIdx].avg = ((+updated[rowIdx].start + +updated[rowIdx].end) / 2);
+    }
+    setEditRows(updated);
+  }
+
+  function handleUploadCSV(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      const lines = evt.target.result.trim().split("\n");
+      const headers = lines[0].split(",").map(h => h.trim().toLowerCase());
+      const rows = lines.slice(1).map(line => {
+        const vals = line.split(",");
+        const obj = {};
+        headers.forEach((h, i) => { obj[h] = vals[i]?.trim(); });
+        return {
+          month: (obj.month || obj.fy2025 || "").toUpperCase(),
+          sub: (obj.sub || obj.subcontract || "").toUpperCase(),
+          start: +obj.start_headcount || +obj.start || 0,
+          end: +obj.end_headcount || +obj.end || 0,
+          avg: +obj.avg || 0,
+          resign: +obj.resign || 0,
+        };
+      }).filter(r => r.month && r.sub);
+      setEditRows(rows);
+    };
+    reader.readAsText(file);
+  }
+
+  return (
+    <div style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif", background: "#030712", minHeight: "100vh", color: "#e2e8f0", padding: "0 0 40px" }}>
+      {/* Header */}
+      <div style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%)", borderBottom: "1px solid #1e293b", padding: "24px 32px 20px" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div style={{ width: 8, height: 32, background: "linear-gradient(180deg,#6366f1,#a78bfa)", borderRadius: 4 }} />
+              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: "-0.5px", color: "#f1f5f9" }}>
+                Turnover Rate Dashboard
+              </h1>
+            </div>
+            <p style={{ margin: "4px 0 0 18px", fontSize: 13, color: "#64748b" }}>FY2025 · Subcontractor Workforce Analytics</p>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <label style={{ cursor: "pointer", padding: "8px 16px", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, fontSize: 13, color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
+              <span>📂</span> Import CSV
+              <input ref={fileRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleUploadCSV} />
+            </label>
+          </div>
+        </div>
+        {/* Tabs */}
+        <div style={{ display: "flex", gap: 4, marginTop: 20 }}>
+          {[["overview","📊 Overview"], ["trends","📈 Trends"], ["detail","🔍 Detail Table"]].map(([key, label]) => (
+            <button key={key} onClick={() => setTab(key)} style={{
+              padding: "8px 18px", borderRadius: "8px 8px 0 0", border: "none", cursor: "pointer", fontSize: 13, fontWeight: 500,
+              background: tab === key ? "#6366f1" : "transparent",
+              color: tab === key ? "#fff" : "#64748b",
+              transition: "all 0.2s"
+            }}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ padding: "24px 32px" }}>
+
+        {/* KPI Cards */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 16, marginBottom: 28 }}>
+          <div style={{ background: "linear-gradient(135deg,#1e1b4b,#312e81)", border: "1px solid #4338ca", borderRadius: 12, padding: "18px 20px" }}>
+            <p style={{ margin: "0 0 6px", fontSize: 11, color: "#a5b4fc", textTransform: "uppercase", letterSpacing: 1 }}>Overall Turnover</p>
+            <p style={{ margin: 0, fontSize: 32, fontWeight: 700, color: "#fff" }}>{overallTurnover.toFixed(1)}<span style={{ fontSize: 16 }}>%</span></p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#6366f1" }}>FY2025 Average</p>
+          </div>
+          <div style={{ background: "linear-gradient(135deg,#1c1917,#292524)", border: "1px solid #44403c", borderRadius: 12, padding: "18px 20px" }}>
+            <p style={{ margin: "0 0 6px", fontSize: 11, color: "#d6d3d1", textTransform: "uppercase", letterSpacing: 1 }}>Total Resignations</p>
+            <p style={{ margin: 0, fontSize: 32, fontWeight: 700, color: "#fbbf24" }}>{overallResign.toLocaleString()}</p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: "#92400e" }}>All subcontractors</p>
+          </div>
+          {summaryBySub.map(s => (
+            <div key={s.sub} style={{ background: "#0f172a", border: `1px solid ${COLORS[s.sub]}40`, borderRadius: 12, padding: "18px 20px", borderLeft: `3px solid ${COLORS[s.sub]}` }}>
+              <p style={{ margin: "0 0 6px", fontSize: 11, color: COLORS[s.sub], textTransform: "uppercase", letterSpacing: 1 }}>{s.sub}</p>
+              <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: "#f1f5f9" }}>{s.avgTurnover.toFixed(1)}<span style={{ fontSize: 14 }}>%</span></p>
+              <p style={{ margin: "4px 0 0", fontSize: 12, color: "#475569" }}>
+                {s.totalResign} resigned · Peak {s.maxTurnover.toFixed(1)}%
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* OVERVIEW TAB */}
+        {tab === "overview" && (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+            {/* Turnover % by month line chart */}
+            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: 20, gridColumn: "1 / -1" }}>
+              <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 600, color: "#94a3b8" }}>Monthly Turnover Rate (%) per Subcontractor</h3>
+              <ResponsiveContainer width="100%" height={260}>
+                <LineChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 12 }} />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 12 }} unit="%" />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 13 }} />
+                  {SUBCONTRACTORS.map(s => (
+                    <Line key={s} type="monotone" dataKey={s + "_turnover"} name={s} stroke={COLORS[s]} strokeWidth={2.5} dot={{ r: 4 }} activeDot={{ r: 6 }} connectNulls />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Monthly resignations bar */}
+            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: 20 }}>
+              <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 600, color: "#94a3b8" }}>Monthly Resignations by Sub</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={monthlyData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 11 }} />
+                  <YAxis tick={{ fill: "#64748b", fontSize: 11 }} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  {SUBCONTRACTORS.map(s => (
+                    <Bar key={s} dataKey={s + "_resign"} name={s} stackId="a" fill={COLORS[s]} />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Radar */}
+            <div style={{ background: "#0f172a", border: "1px solid #1e293b", borderRadius: 12, padding: 20 }}>
+              <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 600, color: "#94a3b8" }}>Turnover Pattern (Radar)</h3>
+              <ResponsiveContainer width="100%" height={220}>
+                <RadarChart data={radarData}>
+                  <PolarGrid stroke="#1e293b" />
+                  <PolarAngleAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 11 }} />
+                  <PolarRadiusAxis angle={30} domain={[0, "auto"]} tick={{ fill: "#475569", fontSize: 10 }} />
+                  {SUBCONTRACTORS.map(s => (
+                    <Radar key={s} name={s} dataKey={s} stroke={COLORS[s]} fill={COLORS[s]} fillOpacity={0.15} />
+                  ))}
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  <Tooltip content={<CustomTooltip />} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* TRENDS TAB */}
+        {tab === "trends" && (
+          <div style={{ display: "grid", gap: 20 }}>
+            {SUBCONTRACTORS.map(s => {
+              const subData = processed.filter(r => r.sub === s).sort((a, b) => MONTHS_ORDER.indexOf(a.month) - MONTHS_ORDER.indexOf(b.month));
+              const chartData = subData.map(r => ({ month: r.month, "Turnover %": +r.turnover.toFixed(2), "Resign": r.resign, "Avg HC": r.avg }));
+              return (
+                <div key={s} style={{ background: "#0f172a", border: `1px solid ${COLORS[s]}30`, borderRadius: 12, padding: 20, borderLeft: `3px solid ${COLORS[s]}` }}>
+                  <h3 style={{ margin: "0 0 16px", fontSize: 14, fontWeight: 600, color: COLORS[s] }}>{s} — Monthly Trend</h3>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <BarChart data={chartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                      <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 11 }} />
+                      <YAxis yAxisId="left" tick={{ fill: "#64748b", fontSize: 11 }} unit="%" />
+                      <YAxis yAxisId="right" orientation="right" tick={{ fill: "#64748b", fontSize: 11 }} />
+                      <Tooltip content={<CustomTooltip />} />
+                      <Legend wrapperStyle={{ fontSize: 12 }} />
+                      <Bar yAxisId="left" dataKey="Turnover %" fill={COLORS[s]} radius={[4, 4, 0, 0]}>
+                        {chartData.map((entry, i) => (
+                          <Cell key={i} fill={entry["Turnover %"] > 20 ? "#ef4444" : COLORS[s]} />
+                        ))}
+                      </Bar>
+                      <Line yAxisId="right" type="monotone" dataKey="Resign" stroke="#f1f5f9" strokeWidth={2} dot={{ r: 3 }} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* DETAIL TABLE TAB */}
+        {tab === "detail" && (
+          <div>
+            <div style={{ display: "flex", gap: 12, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: 6 }}>
+                {["ALL", ...SUBCONTRACTORS].map(s => (
+                  <button key={s} onClick={() => setFilterSub(s)} style={{
+                    padding: "6px 14px", borderRadius: 20, border: `1px solid ${s === "ALL" ? "#475569" : COLORS[s] + "80"}`,
+                    background: filterSub === s ? (s === "ALL" ? "#334155" : COLORS[s]) : "transparent",
+                    color: filterSub === s ? "#fff" : "#94a3b8", cursor: "pointer", fontSize: 12, fontWeight: 500, transition: "all 0.15s"
+                  }}>{s}</button>
+                ))}
+              </div>
+              <button onClick={() => setShowAdd(v => !v)} style={{ marginLeft: "auto", padding: "7px 16px", background: "#4f46e5", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, fontWeight: 600 }}>
+                + Add Row
+              </button>
+            </div>
+
+            {showAdd && (
+              <div style={{ background: "#0f172a", border: "1px solid #4f46e5", borderRadius: 10, padding: 16, marginBottom: 16, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+                {[
+                  { key: "month", label: "Month", type: "select", opts: MONTHS_ORDER },
+                  { key: "sub", label: "Subcontractor", type: "select", opts: SUBCONTRACTORS },
+                  { key: "start", label: "Start HC", type: "number" },
+                  { key: "end", label: "End HC", type: "number" },
+                  { key: "resign", label: "Resign", type: "number" },
+                ].map(f => (
+                  <div key={f.key}>
+                    <label style={{ fontSize: 11, color: "#64748b", display: "block", marginBottom: 4 }}>{f.label}</label>
+                    {f.type === "select"
+                      ? <select value={newRow[f.key]} onChange={e => setNewRow(r => ({ ...r, [f.key]: e.target.value }))} style={{ background: "#1e293b", border: "1px solid #334155", color: "#e2e8f0", borderRadius: 6, padding: "6px 10px", fontSize: 13 }}>
+                          {f.opts.map(o => <option key={o} value={o}>{o}</option>)}
+                        </select>
+                      : <input type="number" value={newRow[f.key]} onChange={e => setNewRow(r => ({ ...r, [f.key]: e.target.value }))} style={{ background: "#1e293b", border: "1px solid #334155", color: "#e2e8f0", borderRadius: 6, padding: "6px 10px", fontSize: 13, width: 90 }} />
+                    }
+                  </div>
+                ))}
+                <button onClick={handleAddRow} style={{ padding: "7px 16px", background: "#4f46e5", border: "none", borderRadius: 8, color: "#fff", cursor: "pointer", fontSize: 13, height: 34 }}>Add</button>
+                <button onClick={() => setShowAdd(false)} style={{ padding: "7px 12px", background: "#1e293b", border: "1px solid #334155", borderRadius: 8, color: "#94a3b8", cursor: "pointer", fontSize: 13, height: 34 }}>Cancel</button>
+              </div>
+            )}
+
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "separate", borderSpacing: 0, fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    {["Month","Subcontractor","Start HC","End HC","Avg HC","Resign","Turnover %",""].map((h, i) => (
+                      <th key={i} style={{ padding: "10px 14px", background: "#0f172a", color: "#475569", fontWeight: 600, textAlign: i === 0 || i === 1 ? "left" : "right", borderBottom: "2px solid #1e293b", fontSize: 11, textTransform: "uppercase", letterSpacing: 0.5 }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {tableData.map((row, i) => {
+                    const globalIdx = editRows.findIndex(r => r.month === row.month && r.sub === row.sub);
+                    const turnover = calcTurnover(row.resign, row.avg);
+                    return (
+                      <tr key={i} style={{ background: i % 2 === 0 ? "#080d17" : "#0a1020" }}>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #1e293b", color: "#94a3b8", fontWeight: 600 }}>{row.month}</td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #1e293b" }}>
+                          <span style={{ background: COLORS[row.sub] + "20", color: COLORS[row.sub], borderRadius: 4, padding: "2px 8px", fontSize: 12, fontWeight: 600 }}>{row.sub}</span>
+                        </td>
+                        {["start","end","avg","resign"].map(f => (
+                          <td key={f} style={{ padding: "9px 14px", borderBottom: "1px solid #1e293b", textAlign: "right" }}>
+                            <input type="number" value={editRows[globalIdx]?.[f] ?? ""} onChange={e => handleEditCell(globalIdx, f, e.target.value)}
+                              style={{ background: "transparent", border: "1px solid transparent", color: "#e2e8f0", textAlign: "right", width: 80, padding: "2px 4px", borderRadius: 4, fontSize: 13, outline: "none" }}
+                              onFocus={e => e.target.style.borderColor = "#4f46e5"}
+                              onBlur={e => e.target.style.borderColor = "transparent"}
+                            />
+                          </td>
+                        ))}
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #1e293b", textAlign: "right" }}>
+                          <span style={{
+                            background: turnover > 30 ? "#ef444430" : turnover > 10 ? "#f59e0b30" : "#22c55e20",
+                            color: turnover > 30 ? "#ef4444" : turnover > 10 ? "#f59e0b" : "#22c55e",
+                            borderRadius: 4, padding: "2px 8px", fontWeight: 700, fontSize: 13
+                          }}>{turnover.toFixed(2)}%</span>
+                        </td>
+                        <td style={{ padding: "9px 14px", borderBottom: "1px solid #1e293b", textAlign: "right" }}>
+                          <button onClick={() => handleDeleteRow(globalIdx)} style={{ background: "transparent", border: "1px solid #ef444440", color: "#ef4444", borderRadius: 6, padding: "3px 8px", cursor: "pointer", fontSize: 12 }}>✕</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            <p style={{ margin: "10px 0 0", fontSize: 12, color: "#334155" }}>
+              💡 คลิกที่ค่าในตารางเพื่อแก้ไขโดยตรง · ลบแถวด้วยปุ่ม ✕ · เพิ่มแถวใหม่ด้วยปุ่ม Add Row · นำเข้าข้อมูลด้วยไฟล์ CSV
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
