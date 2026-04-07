@@ -1,505 +1,922 @@
-import { useState, useEffect, useRef } from "react";
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from "recharts";
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HR Turnover Dashboard — FY2025</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0f1e;
+    --surface: #111827;
+    --surface2: #1a2336;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #ff6b6b;
+    --accent3: #ffd166;
+    --cpp: #00d4ff;
+    --ckm: #ff6b6b;
+    --tfw: #06d6a0;
+    --text: #e8f0fe;
+    --muted: #8096b4;
+    --card-glow: 0 0 0 1px rgba(0,212,255,0.08), 0 4px 32px rgba(0,0,0,0.4);
+  }
 
-const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-const SUBS = ["SUB CPP","SUB CKM","SUB TFW"];
-const C = {"SUB CPP":"#38bdf8","SUB CKM":"#fb923c","SUB TFW":"#f472b6"};
-const REASON_COLORS = {"ได้งานใหม่":"#38bdf8","กลับต่างจังหวัด":"#fb923c","เหตุผลส่วนตัว":"#a78bfa","ส่งตัวคืน ทำผิดกฎ":"#f87171","ปรับบรรจุ":"#34d399","ขาดงาน 3 วัน":"#fbbf24","ธุรกิจส่วนตัว":"#f472b6","ไม่มีโอที":"#94a3b8","พักรักษาตัว":"#67e8f9","ตั้งครรภ์":"#f9a8d4","ศึกษาต่อ":"#6ee7b7","ได้งานใหม่เป็นรายเดือน":"#93c5fd","เพื่อประกอบอาชีพอื่น":"#fde68a","อุปสมบท":"#c4b5fd"};
+  * { box-sizing: border-box; margin: 0; padding: 0; }
 
-const SEED_HC = [
-  {id:1,month:"JAN",sub:"SUB CPP",start:284,end:274,resign:12},{id:2,month:"JAN",sub:"SUB CKM",start:104,end:96,resign:17},{id:3,month:"JAN",sub:"SUB TFW",start:0,end:3,resign:0},
-  {id:4,month:"FEB",sub:"SUB CPP",start:274,end:265,resign:9},{id:5,month:"FEB",sub:"SUB CKM",start:96,end:95,resign:15},{id:6,month:"FEB",sub:"SUB TFW",start:3,end:11,resign:2},
-  {id:7,month:"MAR",sub:"SUB CPP",start:265,end:260,resign:5},{id:8,month:"MAR",sub:"SUB CKM",start:95,end:100,resign:11},{id:9,month:"MAR",sub:"SUB TFW",start:11,end:17,resign:8},
-  {id:10,month:"APR",sub:"SUB CPP",start:260,end:253,resign:10},{id:11,month:"APR",sub:"SUB CKM",start:100,end:104,resign:12},{id:12,month:"APR",sub:"SUB TFW",start:17,end:19,resign:11},
-  {id:13,month:"MAY",sub:"SUB CPP",start:253,end:261,resign:7},{id:14,month:"MAY",sub:"SUB CKM",start:104,end:138,resign:14},{id:15,month:"MAY",sub:"SUB TFW",start:19,end:44,resign:24},
-  {id:16,month:"JUN",sub:"SUB CPP",start:261,end:248,resign:13},{id:17,month:"JUN",sub:"SUB CKM",start:138,end:145,resign:23},{id:18,month:"JUN",sub:"SUB TFW",start:44,end:50,resign:15},
-  {id:19,month:"JUL",sub:"SUB CPP",start:248,end:246,resign:2},{id:20,month:"JUL",sub:"SUB CKM",start:145,end:152,resign:24},{id:21,month:"JUL",sub:"SUB TFW",start:50,end:52,resign:19},
-  {id:22,month:"AUG",sub:"SUB CPP",start:246,end:242,resign:4},{id:23,month:"AUG",sub:"SUB CKM",start:152,end:158,resign:13},{id:24,month:"AUG",sub:"SUB TFW",start:52,end:57,resign:12},
-  {id:25,month:"SEP",sub:"SUB CPP",start:242,end:241,resign:1},{id:26,month:"SEP",sub:"SUB CKM",start:158,end:151,resign:18},{id:27,month:"SEP",sub:"SUB TFW",start:57,end:64,resign:4},
-  {id:28,month:"OCT",sub:"SUB CPP",start:241,end:237,resign:4},{id:29,month:"OCT",sub:"SUB CKM",start:151,end:161,resign:14},{id:30,month:"OCT",sub:"SUB TFW",start:64,end:66,resign:15},
-  {id:31,month:"NOV",sub:"SUB CPP",start:237,end:235,resign:2},{id:32,month:"NOV",sub:"SUB CKM",start:161,end:178,resign:11},{id:33,month:"NOV",sub:"SUB TFW",start:66,end:69,resign:9},
-  {id:34,month:"DEC",sub:"SUB CPP",start:235,end:234,resign:1},{id:35,month:"DEC",sub:"SUB CKM",start:178,end:174,resign:5},{id:36,month:"DEC",sub:"SUB TFW",start:69,end:70,resign:3},
-];
+  body {
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
 
-const SEED_RESIGN = [
-  {id:1,code:"40000167",name:"นายวัชรินทร์ แก้วปุ่ม",sub:"SUB TFW",dep:"BHA",section:"FU32/BHA/3.5M/TGT2",startWork:"2025-10-20",dateResign:"2025-10-24",reason:"ได้งานใหม่"},
-  {id:2,code:"50000697",name:"นายชาญชัย เสาร์นอก",sub:"SUB CKM",dep:"BHA",section:"FU32/BHA/3.5M/TGT2",startWork:"2025-09-15",dateResign:"2025-10-06",reason:"กลับต่างจังหวัด"},
-  {id:3,code:"1003793",name:"น.ส.ณัฐธิดา บุญหล้า",sub:"SUB CPP",dep:"BHA",section:"FU32/BHA/ASS'Y/TGT2",startWork:"2021-11-22",dateResign:"2025-09-10",reason:"กลับต่างจังหวัด"},
-  {id:4,code:"1004300",name:"น.ส.เข็มพิมล พัจนา",sub:"SUB CPP",dep:"BHA",section:"FU32/BHA/ASS'Y/TGT2",startWork:"2022-07-26",dateResign:"2025-02-13",reason:"ได้งานใหม่"},
-  {id:5,code:"1004256",name:"นายอนุชัย พลสูงเนิน",sub:"SUB CPP",dep:"FUB",section:"FU32/FUB/INLET PIPE/TGT2",startWork:"2022-06-13",dateResign:"2025-01-07",reason:"ได้งานใหม่"},
-  {id:6,code:"50000288",name:"นายมงคลชัย สาตะสิน",sub:"SUB CKM",dep:"FUB",section:"FU32/FUB/INLET PIPE/TGT2",startWork:"2023-02-06",dateResign:"2025-03-17",reason:"ได้งานใหม่"},
-  {id:7,code:"50000328",name:"นายธนพล เดชสิริ",sub:"SUB CKM",dep:"FUB",section:"FU32/FUB/INLET PIPE/TGT2",startWork:"2023-03-20",dateResign:"2025-01-27",reason:"ได้งานใหม่"},
-  {id:8,code:"1001667",name:"นายอรรถพร คำนาแซง",sub:"SUB CPP",dep:"INE",section:"IE33/INE/TGT3",startWork:"2018-01-04",dateResign:"2025-04-01",reason:"ปรับบรรจุ"},
-  {id:9,code:"1003927",name:"นายประกอบ ตุ่นใจ",sub:"SUB CPP",dep:"INC",section:"IE32/INC/TGT2",startWork:"2022-01-28",dateResign:"2025-01-15",reason:"กลับต่างจังหวัด"},
-  {id:10,code:"1003929",name:"นายชลาสินธุ์ แสงอาทิตย์",sub:"SUB CPP",dep:"INC",section:"IE32/INC/TGT2",startWork:"2022-01-28",dateResign:"2025-06-24",reason:"ส่งตัวคืน ทำผิดกฎ"},
-  {id:11,code:"1004259",name:"น.ส.ณัจฉรียา ศรีทอง",sub:"SUB CPP",dep:"INC",section:"IE32/INC/TGT2",startWork:"2022-06-15",dateResign:"2025-01-07",reason:"ได้งานใหม่"},
-  {id:12,code:"1004266",name:"น.ส.ธนัชพร บังศรี",sub:"SUB CPP",dep:"INC",section:"IE32/INC/TGT2",startWork:"2022-06-20",dateResign:"2025-05-26",reason:"เหตุผลส่วนตัว"},
-  {id:13,code:"40000013",name:"นายเอนก ชิณศรี",sub:"SUB TFW",dep:"INC",section:"IE32/INC/TGT2",startWork:"2025-02-24",dateResign:"2025-04-01",reason:"ได้งานใหม่"},
-  {id:14,code:"40000035",name:"นายกิตติพงษ มะฤทธิ์",sub:"SUB TFW",dep:"INC",section:"IE32/INC/TGT2",startWork:"2025-04-21",dateResign:"2025-06-06",reason:"ได้งานใหม่"},
-  {id:15,code:"50000154",name:"น.ส.จริยา เศษศุวรรณ",sub:"SUB CKM",dep:"INC",section:"IE32/INC/TGT2",startWork:"2022-08-02",dateResign:"2025-10-01",reason:"ปรับบรรจุ"},
-  {id:16,code:"50000521",name:"นายอนุวัฒน์ ประทุมพิมพ์",sub:"SUB CKM",dep:"INC",section:"IE32/INC/TGT2",startWork:"2025-02-03",dateResign:"2025-02-14",reason:"ได้งานใหม่"},
-  {id:17,code:"40000014",name:"นายกรีฑา อ่อนลี",sub:"SUB TFW",dep:"INB",section:"IE32/INB/TGT2",startWork:"2025-02-24",dateResign:"2025-03-25",reason:"ได้งานใหม่"},
-  {id:18,code:"50000333",name:"นายพงษ์นฤทธิ์ อุ่นคำ",sub:"SUB CKM",dep:"INB",section:"IE32/INB/TGT2",startWork:"2023-04-19",dateResign:"2025-01-06",reason:"ได้งานใหม่"},
-  {id:19,code:"1004600",name:"นายวรชัย ประชุมวรรณ์",sub:"SUB CPP",dep:"MTC",section:"MS33/MTC/TGT3",startWork:"2023-03-08",dateResign:"2025-03-03",reason:"ได้งานใหม่"},
-  {id:20,code:"1004620",name:"นายศุภกร บรรดาสิทธิ์",sub:"SUB CPP",dep:"MTC",section:"MS33/MTC/TGT3",startWork:"2023-04-19",dateResign:"2025-06-12",reason:"ได้งานใหม่"},
-  {id:21,code:"50000641",name:"นายธนวัฒน์ วายลม",sub:"SUB CKM",dep:"MTC",section:"MS33/MTC/TGT3",startWork:"2025-06-23",dateResign:"2025-07-03",reason:"กลับต่างจังหวัด"},
-  {id:22,code:"1004749",name:"นายวีรภาพ ลาพมาก",sub:"SUB CPP",dep:"PAC",section:"PC30/PAC/CENTER/TGT2",startWork:"2025-05-07",dateResign:"2025-06-19",reason:"ส่งตัวคืน ทำผิดกฎ"},
-  {id:23,code:"40000047",name:"น.ส.สุภาพร ดอนเงิน",sub:"SUB TFW",dep:"PAC",section:"PC30/PAC/CENTER/TGT2",startWork:"2025-05-07",dateResign:"2025-05-23",reason:"ได้งานใหม่"},
-  {id:24,code:"50000569",name:"น.ส.ปรียานุช เพ็ชรแท้",sub:"SUB CKM",dep:"PAC",section:"PC30/PAC/CENTER/TGT2",startWork:"2025-05-07",dateResign:"2025-06-05",reason:"ได้งานใหม่"},
-  {id:25,code:"50000539",name:"นายฐิติพันธุ์ พินงรัมย์",sub:"SUB CKM",dep:"FCA",section:"PD31/FCA/RUB/TGT1",startWork:"2025-03-26",dateResign:"2025-03-27",reason:"เหตุผลส่วนตัว"},
-  {id:26,code:"50000547",name:"นายศุภสัณห์ กิมานันทน์",sub:"SUB CKM",dep:"FCA",section:"PD31/FCA/RUB/TGT1",startWork:"2025-04-07",dateResign:"2025-05-13",reason:"ขาดงาน 3 วัน"},
-  {id:27,code:"1004666",name:"นายอัคเดช สินกังวาน",sub:"SUB CPP",dep:"DSP",section:"PD31/DSP/SPC/TGT1",startWork:"2023-07-24",dateResign:"2025-02-18",reason:"ได้งานใหม่"},
-  {id:28,code:"1004278",name:"น.ส.รุ้งลาวัลย์ พรมศรี",sub:"SUB CPP",dep:"FCA",section:"PD31/FCA/FUEL HOSE/TGT1",startWork:"2022-07-04",dateResign:"2025-08-01",reason:"ได้งานใหม่"},
-  {id:29,code:"1004116",name:"น.ส.ปราถนา ตุ่มดาวเรือง",sub:"SUB CPP",dep:"IND",section:"PD33/IND/TGT3",startWork:"2022-03-30",dateResign:"2025-03-03",reason:"ได้งานใหม่"},
-  {id:30,code:"1004117",name:"น.ส.อาธิญา ระดมงาม",sub:"SUB CPP",dep:"IND",section:"PD33/IND/TGT3",startWork:"2022-03-30",dateResign:"2025-01-07",reason:"กลับต่างจังหวัด"},
-  {id:31,code:"1004685",name:"นายกณิศ ปันเงิน",sub:"SUB CPP",dep:"IND",section:"PD33/IND/TGT3",startWork:"2023-09-06",dateResign:"2025-07-15",reason:"ธุรกิจส่วนตัว"},
-  {id:32,code:"50000566",name:"น.ส.ชลฤด พิมลพันธุ์",sub:"SUB CKM",dep:"IND",section:"PD33/IND/TGT3",startWork:"2025-05-07",dateResign:"2025-10-27",reason:"ได้งานใหม่"},
-  {id:33,code:"50000584",name:"นายวัฒนพงศ์ หินเหล็ก",sub:"SUB CKM",dep:"IND",section:"PD33/IND/TGT3",startWork:"2025-05-19",dateResign:"2025-06-25",reason:"ส่งตัวคืน ทำผิดกฎ"},
-  {id:34,code:"50000591",name:"น.ส.สิดาพร เกตุทองมา",sub:"SUB CKM",dep:"IND",section:"PD33/IND/TGT3",startWork:"2025-05-19",dateResign:"2025-09-24",reason:"ตั้งครรภ์"},
-  {id:35,code:"50000592",name:"น.ส.ยุภาวรรณ ภางาม",sub:"SUB CKM",dep:"IND",section:"PD33/IND/TGT3",startWork:"2025-05-19",dateResign:"2025-05-30",reason:"ขาดงาน 3 วัน"},
-  {id:36,code:"50000593",name:"น.ส.สุพาภรณ์ ปุริวัน",sub:"SUB CKM",dep:"IND",section:"PD33/IND/TGT3",startWork:"2025-05-19",dateResign:"2025-07-02",reason:"พักรักษาตัว"},
-  {id:37,code:"40000162",name:"น.ส.เจนจิรา พลเขต",sub:"SUB TFW",dep:"IND",section:"PD33/IND/TGT3",startWork:"2025-10-06",dateResign:"2025-12-11",reason:"ได้งานใหม่"},
-  {id:38,code:"1004497",name:"นายสมเกียรติ โมลี",sub:"SUB CPP",dep:"DCP",section:"PT32/DCP/TGT2",startWork:"2022-12-14",dateResign:"2025-08-01",reason:"ธุรกิจส่วนตัว"},
-  {id:39,code:"50000473",name:"นายกิตติภณ อุตก๋า",sub:"SUB CKM",dep:"DCP",section:"PT32/DCP/TGT2",startWork:"2024-06-10",dateResign:"2025-06-30",reason:"กลับต่างจังหวัด"},
-  {id:40,code:"50000682",name:"นายประดิพัทธ์ ภูยาฟ้า",sub:"SUB CKM",dep:"DCP",section:"PT32/DCP/TGT2",startWork:"2025-08-18",dateResign:"2025-08-22",reason:"พักรักษาตัว"},
-  {id:41,code:"1002059",name:"นายวรโชติ เชิดสุข",sub:"SUB CPP",dep:"DLL",section:"PT32/DLL/TGT2",startWork:"2018-06-04",dateResign:"2025-04-26",reason:"ได้งานใหม่"},
-  {id:42,code:"50000361",name:"นายมาโนช อินทรีย์",sub:"SUB CKM",dep:"DLL",section:"PT32/DLL/TGT2",startWork:"2023-06-14",dateResign:"2025-04-02",reason:"กลับต่างจังหวัด"},
-  {id:43,code:"50000522",name:"นายวิชิตชัย โทแก้ว",sub:"SUB CKM",dep:"PEB",section:"PT32/PEB/TGT2",startWork:"2025-02-03",dateResign:"2025-02-05",reason:"ไม่มีโอที"},
-  {id:44,code:"1003238",name:"นายเมธากร คำจวนจันทร์",sub:"SUB CPP",dep:"PEB",section:"PT32/PEB/TGT2",startWork:"2021-04-05",dateResign:"2025-05-07",reason:"ได้งานใหม่"},
-  {id:45,code:"50000514",name:"นายธนากร นามณฑา",sub:"SUB CKM",dep:"PEB",section:"PT32/PEB/TGT2",startWork:"2025-01-06",dateResign:"2025-02-21",reason:"ได้งานใหม่"},
-  {id:46,code:"1004740",name:"นายวันเฉลิม ลาธิ",sub:"SUB CPP",dep:"ASA",section:"SS32/ASA/ASSY/TGT2",startWork:"2024-12-23",dateResign:"2025-02-26",reason:"ได้งานใหม่"},
-  {id:47,code:"1004741",name:"นายจิรภัทร รักชาติ",sub:"SUB CPP",dep:"ASA",section:"SS32/ASA/ASSY/TGT2",startWork:"2024-12-23",dateResign:"2025-11-24",reason:"ส่งตัวคืน ทำผิดกฎ"},
-  {id:48,code:"40000008",name:"นายปฐมพงศ์ ปะนาเต",sub:"SUB TFW",dep:"ASA",section:"SS32/ASA/ASSY/TGT2",startWork:"2025-02-10",dateResign:"2025-02-18",reason:"ได้งานใหม่"},
-  {id:49,code:"50000233",name:"นายพงศธร เพ็ชรจันทร์",sub:"SUB CKM",dep:"ASA",section:"SS32/ASA/ASSY/TGT2",startWork:"2022-12-14",dateResign:"2025-01-13",reason:"ได้งานใหม่"},
-  {id:50,code:"50000136",name:"นายอนุชิต โฉลกดี",sub:"SUB CKM",dep:"ASA",section:"SS32/ASA/PASSENGER/TGT2",startWork:"2022-08-02",dateResign:"2025-01-13",reason:"ได้งานใหม่"},
-  {id:51,code:"40000007",name:"นายภาคินัย เพียขันทา",sub:"SUB TFW",dep:"ASA",section:"SS32/ASA/PASSENGER/TGT2",startWork:"2025-02-03",dateResign:"2025-03-18",reason:"ได้งานใหม่"},
-  {id:52,code:"40000044",name:"นายศิริพงศ์ บุญอาจ",sub:"SUB TFW",dep:"ASA",section:"SS32/ASA/PASSENGER/TGT2",startWork:"2025-05-05",dateResign:"2025-05-07",reason:"ได้งานใหม่"},
-  {id:53,code:"50000513",name:"นายประพัฒน์ โสภากุล",sub:"SUB CKM",dep:"ASA",section:"SS32/ASA/PASSENGER/TGT2",startWork:"2025-01-06",dateResign:"2025-02-06",reason:"ไม่มีโอที"},
-  {id:54,code:"40000096",name:"นายภูมิมินทร์ ทวะลี",sub:"SUB TFW",dep:"ASA",section:"SS32/ASA/DRIVER/TGT2",startWork:"2025-06-16",dateResign:"2025-08-05",reason:"ได้งานใหม่"},
-  {id:55,code:"1003390",name:"นายวัชรเกียรติ เกตุนาค",sub:"SUB CPP",dep:"ASA",section:"SS32/ASA/DRIVER/TGT2",startWork:"2021-06-09",dateResign:"2025-08-30",reason:"ส่งตัวคืน ทำผิดกฎ"},
-  {id:56,code:"50000180",name:"น.ส.วรรณา แก้วกัลยา",sub:"SUB CKM",dep:"ASA",section:"SS32/ASA/DRIVER/TGT2",startWork:"2025-07-21",dateResign:"2025-07-23",reason:"ขาดงาน 3 วัน"},
-  {id:57,code:"1004033",name:"นายบุลากร ดาบุตร",sub:"SUB CPP",dep:"ASA",section:"SS32/ASA/PASSENGER/TGT2",startWork:"2022-02-28",dateResign:"2025-04-25",reason:"ส่งตัวคืน ทำผิดกฎ"},
-  {id:58,code:"1003058",name:"น.ส.อัจฉราภรณ์ ขารพ",sub:"SUB CPP",dep:"ASB",section:"SS32/ASB/KB/TGT2",startWork:"2021-01-20",dateResign:"2025-06-18",reason:"เหตุผลส่วนตัว"},
-  {id:59,code:"1004132",name:"น.ส.อาจารี สุพรรณ",sub:"SUB CPP",dep:"ASB",section:"SS32/ASB/KB/TGT2",startWork:"2022-04-04",dateResign:"2025-05-19",reason:"เหตุผลส่วนตัว"},
-  {id:60,code:"50000046",name:"น.ส.สุพัฒนา โพธ์มูล",sub:"SUB CKM",dep:"ASB",section:"SS32/ASB/KB/TGT2",startWork:"2022-04-25",dateResign:"2025-04-21",reason:"ได้งานใหม่"},
-  {id:61,code:"50000191",name:"น.ส.มาศพิมพ์ขวัญ รูปขันธ์",sub:"SUB CKM",dep:"ASB",section:"SS32/ASB/KB/TGT2",startWork:"2022-09-12",dateResign:"2025-06-12",reason:"ไม่มีโอที"},
-  {id:62,code:"40000001",name:"นายศักดา ประพาน",sub:"SUB TFW",dep:"ASB",section:"SS32/ASB/KB/TGT2",startWork:"2025-01-06",dateResign:"2025-03-04",reason:"ได้งานใหม่"},
-  {id:63,code:"50000190",name:"นายกฤตภัค แก้วละมุล",sub:"SUB CKM",dep:"ASB",section:"SS32/ASB/CB/TGT2",startWork:"2022-09-12",dateResign:"2025-04-21",reason:"กลับต่างจังหวัด"},
-  {id:64,code:"1003366",name:"น.ส.ฤทัยทิพย์ ยอดยิ่ง",sub:"SUB CPP",dep:"ASB",section:"SS32/ASB/CB/TGT2",startWork:"2021-06-01",dateResign:"2025-03-03",reason:"กลับต่างจังหวัด"},
-  {id:65,code:"40000030",name:"นายจุฬาวัฒน์ ศรีสุวรรณ",sub:"SUB TFW",dep:"ASB",section:"SS32/ASB/CB/TGT2",startWork:"2025-04-07",dateResign:"2025-04-21",reason:"ได้งานใหม่"},
-  {id:66,code:"50000283",name:"นายพลวัฒน์ สุภาพันธ์",sub:"SUB CKM",dep:"ASA",section:"SS32/ASA/PASSENGER/TGT2",startWork:"2023-01-30",dateResign:"2025-03-11",reason:"ได้งานใหม่"},
-  {id:67,code:"1003351",name:"นายหรรษธร มิสกรถา",sub:"SUB CPP",dep:"SWS",section:"SW32/SWS/PU/TGT2",startWork:"2021-05-24",dateResign:"2025-03-03",reason:"กลับต่างจังหวัด"},
-  {id:68,code:"1003696",name:"นายเกรียงไกร บริบูรณ์",sub:"SUB CPP",dep:"SWS",section:"SW32/SWS/PU/TGT2",startWork:"2021-10-18",dateResign:"2025-11-25",reason:"ส่งตัวคืน ทำผิดกฎ"},
-  {id:69,code:"50000043",name:"นายไพทูลย์ ศรีคราม",sub:"SUB CKM",dep:"SWS",section:"SW32/SWS/PU/TGT2",startWork:"2022-04-20",dateResign:"2025-01-13",reason:"ได้งานใหม่"},
-  {id:70,code:"40000005",name:"นายอมรฤทธิ์ จันทวฤทธิ์",sub:"SUB TFW",dep:"SWS",section:"SW32/SWS/PU/TGT2",startWork:"2025-02-03",dateResign:"2025-03-25",reason:"ได้งานใหม่"},
-  {id:71,code:"50000217",name:"น.ส.อารียา เทอำรุง",sub:"SUB CKM",dep:"SWS",section:"SW32/SWS/PU/TGT2",startWork:"2022-11-03",dateResign:"2025-05-07",reason:"กลับต่างจังหวัด"},
-  {id:72,code:"1003369",name:"น.ส.เดือนแรม ชอบดี",sub:"SUB CPP",dep:"SWS",section:"SW32/SWS/PP/TGT2",startWork:"2021-06-01",dateResign:"2025-08-01",reason:"ธุรกิจส่วนตัว"},
-  {id:73,code:"1003370",name:"น.ส.จารุวรรณ จันทะศร",sub:"SUB CPP",dep:"SWS",section:"SW32/SWS/SWL/TGT2",startWork:"2021-06-01",dateResign:"2025-05-26",reason:"เหตุผลส่วนตัว"},
-  {id:74,code:"50000506",name:"น.ส.นันท์ธิชา มั่นจิตร์",sub:"SUB CKM",dep:"SWS",section:"SW32/SWS/SWL/TGT2",startWork:"2024-12-23",dateResign:"2025-01-10",reason:"ได้งานใหม่"},
-  {id:75,code:"50000579",name:"น.ส.อัจฉราพร หงษ์อุดร",sub:"SUB CKM",dep:"SWS",section:"SW32/SWS/SWL/TGT2",startWork:"2025-05-12",dateResign:"2025-05-15",reason:"ได้งานใหม่"},
-  {id:76,code:"40000098",name:"น.ส.มะลิวัลย์ คีรีเพชร",sub:"SUB TFW",dep:"SWS",section:"SW32/SWS/SWL/TGT2",startWork:"2025-06-16",dateResign:"2025-08-05",reason:"ได้งานใหม่"},
-  {id:77,code:"50000264",name:"น.ส.นิภาพร โมลี",sub:"SUB CKM",dep:"ASB",section:"SS32/ASB/KB/TGT2",startWork:"2023-01-11",dateResign:"2025-08-01",reason:"ธุรกิจส่วนตัว"},
-  {id:78,code:"1003289",name:"นายวุฒิพงษ์ ดาศรี",sub:"SUB CPP",dep:"INI",section:"IE33/INI/TGT3",startWork:"2021-04-21",dateResign:"2025-10-01",reason:"ปรับบรรจุ"},
-  {id:79,code:"50000395",name:"นายจิรายุส บุตรสี",sub:"SUB CKM",dep:"TPI",section:"TP30/TPI/TGT2",startWork:"2023-08-16",dateResign:"2025-06-04",reason:"ปรับบรรจุ"},
-  {id:80,code:"50000649",name:"นายอภิชาติ ขุนด่านซ้าย",sub:"SUB CKM",dep:"SWS",section:"SW32/SWS/PU/TGT2",startWork:"2025-07-07",dateResign:"2025-07-22",reason:"กลับต่างจังหวัด"},
-];
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
 
-function calcHC(rows){return rows.map(r=>{const avg=(r.start+r.end)/2;return{...r,avg,turnover:avg>0?(r.resign/avg)*100:0};});}
-function getMonth(d){try{return MONTHS[new Date(d).getMonth()];}catch{return null;}}
+  .wrap { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px 20px 60px; }
 
-const Tip=({active,payload,label})=>{
-  if(!active||!payload?.length)return null;
-  return <div style={{background:"#0d1628",border:"1px solid #1e2d52",borderRadius:8,padding:"10px 14px",fontSize:12}}>
-    <p style={{color:"#6b82aa",marginBottom:4,fontWeight:600}}>{label}</p>
-    {payload.map((p,i)=><p key={i} style={{color:p.color,margin:"2px 0"}}>{p.name}: <b>{typeof p.value==="number"?p.value.toFixed(2):p.value}</b></p>)}
-  </div>;
-};
-const pill=(to)=>({display:"inline-block",padding:"2px 8px",borderRadius:4,fontWeight:700,fontFamily:"monospace",fontSize:12,background:to>30?"#f8717120":to>10?"#fbbf2420":"#34d39920",color:to>30?"#f87171":to>10?"#fbbf24":"#34d399"});
-const stag={"SUB CPP":{bg:"#38bdf820",c:"#38bdf8"},"SUB CKM":{bg:"#fb923c20",c:"#fb923c"},"SUB TFW":{bg:"#f472b620",c:"#f472b6"}};
-const inp={background:"transparent",border:"1px solid transparent",color:"#dce8ff",textAlign:"right",width:72,padding:"2px 4px",borderRadius:4,fontSize:12,fontFamily:"monospace",outline:"none"};
-const sel_s={background:"#0d1628",border:"1px solid #1e2d52",color:"#dce8ff",borderRadius:6,padding:"6px 10px",fontSize:12};
-const numinp_s={...sel_s,width:88,fontFamily:"monospace"};
-const txtinp_s={...sel_s,width:130};
-const grid2={display:"grid",gridTemplateColumns:"1fr 1fr",gap:14};
+  /* Header */
+  header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+  }
 
-export default function App(){
-  const [hc,setHc]=useState([]);
-  const [resign,setResign]=useState([]);
-  const [loaded,setLoaded]=useState(false);
-  const [tab,setTab]=useState("overview");
-  const [subView,setSubView]=useState("ALL");
-  const [fSubR,setFSubR]=useState("ALL");
-  const [fReason,setFReason]=useState("ALL");
-  const [fSubHC,setFSubHC]=useState("ALL");
-  const [showAddHC,setShowAddHC]=useState(false);
-  const [showAddR,setShowAddR]=useState(false);
-  const [saveStatus,setSaveStatus]=useState("saved");
-  const [newHC,setNewHC]=useState({month:"JAN",sub:"SUB CPP",start:"",end:"",resign:""});
-  const [newR,setNewR]=useState({code:"",name:"",sub:"SUB CPP",dep:"",section:"",startWork:"",dateResign:"",reason:"ได้งานใหม่"});
-  const timer=useRef();
+  .header-left { }
+  .header-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.25);
+    color: var(--accent);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 2px;
+    padding: 4px 12px;
+    border-radius: 2px;
+    margin-bottom: 10px;
+  }
+  .header-badge span { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
 
-  useEffect(()=>{
-    (async()=>{
-      try{
-        const r1=await window.storage.get("v2_hc");
-        const r2=await window.storage.get("v2_resign");
-        setHc(r1?.value?JSON.parse(r1.value):SEED_HC);
-        setResign(r2?.value?JSON.parse(r2.value):SEED_RESIGN);
-      }catch{setHc(SEED_HC);setResign(SEED_RESIGN);}
-      setLoaded(true);
-    })();
-  },[]);
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
 
-  useEffect(()=>{
-    if(!loaded)return;
-    setSaveStatus("saving");
-    clearTimeout(timer.current);
-    timer.current=setTimeout(async()=>{
-      try{await window.storage.set("v2_hc",JSON.stringify(hc));await window.storage.set("v2_resign",JSON.stringify(resign));}catch{}
-      setSaveStatus("saved");
-    },900);
-  },[hc,resign,loaded]);
+  h1 {
+    font-size: clamp(22px, 4vw, 38px);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.1;
+  }
+  h1 .fy { color: var(--accent); }
+  .subtitle { color: var(--muted); font-size: 13px; margin-top: 6px; }
 
-  const data=calcHC(hc).sort((a,b)=>MONTHS.indexOf(a.month)-MONTHS.indexOf(b.month)||a.sub.localeCompare(b.sub));
-  const actMonths=MONTHS.filter(m=>data.some(r=>r.month===m));
-  const monthData=actMonths.map(m=>{
-    const obj={month:m};
-    SUBS.forEach(s=>{const r=data.find(x=>x.month===m&&x.sub===s);obj[s+"_to"]=r?+r.turnover.toFixed(2):null;obj[s+"_re"]=r?r.resign:0;});
-    const all=data.filter(r=>r.month===m);const tr=all.reduce((a,r)=>a+r.resign,0),ta=all.reduce((a,r)=>a+r.avg,0);
-    obj.all_to=ta>0?+(tr/ta*100).toFixed(2):0;
-    return obj;
-  });
-  const totR=data.reduce((a,r)=>a+r.resign,0),totA=data.reduce((a,r)=>a+r.avg,0),overTO=totA>0?(totR/totA)*100:0;
-  const subStats=SUBS.map(s=>{const rs=data.filter(r=>r.sub===s);const tr=rs.reduce((a,r)=>a+r.resign,0),ta=rs.reduce((a,r)=>a+r.avg,0);return{sub:s,resign:tr,to:ta>0?(tr/ta)*100:0,peak:Math.max(...rs.map(r=>r.turnover),0)};});
+  /* Filter bar */
+  .filter-bar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 28px;
+    align-items: center;
+  }
+  .filter-label { color: var(--muted); font-size: 12px; margin-right: 4px; font-family: 'JetBrains Mono', monospace; }
+  .filter-btn {
+    padding: 6px 16px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--muted);
+    border-radius: 4px;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 500;
+  }
+  .filter-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .filter-btn.active { background: rgba(0,212,255,0.12); border-color: var(--accent); color: var(--accent); }
+  .filter-btn.cpp.active { background: rgba(0,212,255,0.12); border-color: var(--cpp); color: var(--cpp); }
+  .filter-btn.ckm.active { background: rgba(255,107,107,0.12); border-color: var(--ckm); color: var(--ckm); }
+  .filter-btn.tfw.active { background: rgba(6,214,160,0.12); border-color: var(--tfw); color: var(--tfw); }
 
-  const resignM=resign.map(r=>({...r,monthR:getMonth(r.dateResign)}));
-  const allReasons=[...new Set(resign.map(r=>r.reason))].filter(Boolean);
-  const reasonCounts={};resignM.forEach(r=>{reasonCounts[r.reason]=(reasonCounts[r.reason]||0)+1;});
-  const reasonData=Object.entries(reasonCounts).sort((a,b)=>b[1]-a[1]).map(([reason,count])=>({reason,count}));
-  const reasonByMonth=actMonths.map(m=>{const rows=resignM.filter(r=>r.monthR===m);const rc={};rows.forEach(r=>{rc[r.reason]=(rc[r.reason]||0)+1;});return{month:m,...rc};});
-  const reasonBySub=SUBS.map(s=>{const rows=resignM.filter(r=>r.sub===s);const rc={};rows.forEach(r=>{rc[r.reason]=(rc[r.reason]||0)+1;});return{sub:s,...rc};});
+  /* Upload section */
+  .upload-section {
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 28px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .upload-section label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,212,255,0.1);
+    border: 1px solid rgba(0,212,255,0.3);
+    color: var(--accent);
+    padding: 8px 18px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .upload-section label:hover { background: rgba(0,212,255,0.2); }
+  #fileInput { display: none; }
+  .upload-info { color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .upload-info strong { color: var(--text); display: block; margin-bottom: 2px; }
+  #uploadStatus { font-size: 12px; color: var(--tfw); }
 
-  function updHC(id,f,v){setHc(p=>p.map(r=>r.id===id?{...r,[f]:f==="month"||f==="sub"?v:+v}:r));}
-  function delHC(id){setHc(p=>p.filter(r=>r.id!==id));}
-  function addHCfn(){if(newHC.resign==="")return;setHc(p=>[...p,{id:Date.now(),...newHC,start:+newHC.start||0,end:+newHC.end||0,resign:+newHC.resign||0}]);setNewHC({month:"JAN",sub:"SUB CPP",start:"",end:"",resign:""});setShowAddHC(false);}
-  function delR(id){setResign(p=>p.filter(r=>r.id!==id));}
-  function addRfn(){if(!newR.name)return;setResign(p=>[...p,{id:Date.now(),...newR}]);setNewR({code:"",name:"",sub:"SUB CPP",dep:"",section:"",startWork:"",dateResign:"",reason:"ได้งานใหม่"});setShowAddR(false);}
+  /* KPI Cards */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-bottom: 28px;
+  }
+  .kpi-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-glow);
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+  .kpi-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+  .kpi-card.total::after { background: linear-gradient(90deg, var(--accent), transparent); }
+  .kpi-card.cpp::after { background: linear-gradient(90deg, var(--cpp), transparent); }
+  .kpi-card.ckm::after { background: linear-gradient(90deg, var(--ckm), transparent); }
+  .kpi-card.tfw::after { background: linear-gradient(90deg, var(--tfw), transparent); }
+  .kpi-card:hover { transform: translateY(-2px); }
 
-  const tableHC=fSubHC==="ALL"?data:data.filter(r=>r.sub===fSubHC);
-  const tableR=resign.filter(r=>(fSubR==="ALL"||r.sub===fSubR)&&(fReason==="ALL"||r.reason===fReason));
+  .kpi-label { font-size: 11px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; }
+  .kpi-value { font-size: 32px; font-weight: 700; font-family: 'JetBrains Mono', monospace; line-height: 1; }
+  .kpi-card.total .kpi-value { color: var(--accent); }
+  .kpi-card.cpp .kpi-value { color: var(--cpp); }
+  .kpi-card.ckm .kpi-value { color: var(--ckm); }
+  .kpi-card.tfw .kpi-value { color: var(--tfw); }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
 
-  const card={background:"#080e1a",border:"1px solid #162040",borderRadius:12,padding:18,marginBottom:14};
-  const ct={fontSize:11,fontWeight:600,color:"#6b82aa",textTransform:"uppercase",letterSpacing:.8,marginBottom:14};
-  const fbtn=(a,ac)=>({padding:"6px 12px",borderRadius:20,border:`1px solid ${a?ac+"80":ac+"30"}`,background:a?ac+"25":"transparent",color:a?ac:"#3d5070",cursor:"pointer",fontSize:11,fontWeight:600,transition:"all .15s"});
-  const addBtn={padding:"7px 14px",background:"linear-gradient(135deg,#1d3b7a,#38bdf8)",border:"none",borderRadius:8,color:"#fff",cursor:"pointer",fontSize:12,fontWeight:700};
-  const addForm={background:"#080e1a",border:"1px solid #38bdf840",borderRadius:10,padding:"14px 16px",marginBottom:12,display:"flex",gap:10,flexWrap:"wrap",alignItems:"flex-end"};
+  /* Charts grid */
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .charts-grid.triple { grid-template-columns: 2fr 1fr 1fr; }
+  @media (max-width: 900px) {
+    .charts-grid, .charts-grid.triple { grid-template-columns: 1fr; }
+  }
 
-  if(!loaded)return <div style={{background:"#04080f",minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",color:"#3d5070",fontFamily:"sans-serif",fontSize:13}}>กำลังโหลด...</div>;
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-glow);
+  }
+  .chart-card.wide { grid-column: 1 / -1; }
 
-  return(
-    <div style={{fontFamily:"'DM Sans','Segoe UI',sans-serif",background:"#04080f",minHeight:"100vh",color:"#dce8ff"}}>
-      <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}input::-webkit-inner-spin-button{-webkit-appearance:none}*{box-sizing:border-box}`}</style>
+  .chart-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+    letter-spacing: 0.3px;
+  }
+  .chart-subtitle { font-size: 11px; color: var(--muted); margin-bottom: 16px; }
+  .chart-wrap { position: relative; }
 
-      {/* HEADER */}
-      <div style={{background:"#080e1aee",backdropFilter:"blur(12px)",borderBottom:"1px solid #162040",padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:50}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:32,height:32,borderRadius:8,background:"linear-gradient(135deg,#1d3b7a,#38bdf8)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>📊</div>
-          <div>
-            <div style={{fontSize:14,fontWeight:700,letterSpacing:"-0.3px"}}>Turnover Rate Dashboard</div>
-            <div style={{fontSize:10,color:"#3d5070",fontFamily:"monospace"}}>FY2025 · Subcontractor Analytics · 2 Sheets</div>
-          </div>
-        </div>
-        <div style={{fontSize:11,color:saveStatus==="saving"?"#fbbf24":"#34d399",fontFamily:"monospace",display:"flex",alignItems:"center",gap:5}}>
-          <span style={{width:6,height:6,borderRadius:"50%",background:saveStatus==="saving"?"#fbbf24":"#34d399",display:"inline-block",animation:"pulse 2s infinite"}}/>
-          {saveStatus==="saving"?"กำลังบันทึก...":"บันทึกแล้ว"}
-        </div>
+  /* Legend dots */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 12px; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Table */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: var(--card-glow);
+    margin-bottom: 20px;
+    overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid rgba(30,45,69,0.5); transition: background 0.15s; }
+  tbody tr:hover { background: var(--surface2); }
+  tbody td { padding: 9px 12px; }
+  .tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+  .tag.cpp { background: rgba(0,212,255,0.12); color: var(--cpp); }
+  .tag.ckm { background: rgba(255,107,107,0.12); color: var(--ckm); }
+  .tag.tfw { background: rgba(6,214,160,0.12); color: var(--tfw); }
+  .rate-bar { display: flex; align-items: center; gap: 8px; }
+  .rate-fill { height: 4px; border-radius: 2px; min-width: 2px; }
+  .rate-num { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* Section titles */
+  .section-title {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    letter-spacing: 2px;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  /* Reason bars */
+  .reason-list { display: flex; flex-direction: column; gap: 10px; }
+  .reason-item { display: flex; flex-direction: column; gap: 4px; }
+  .reason-header { display: flex; justify-content: space-between; font-size: 12px; }
+  .reason-name { color: var(--text); }
+  .reason-count { color: var(--muted); font-family: 'JetBrains Mono', monospace; }
+  .reason-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; }
+  .reason-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--accent), rgba(0,212,255,0.4)); transition: width 0.6s ease; }
+
+  /* Footer */
+  footer {
+    margin-top: 40px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    border-top: 1px solid var(--border);
+    padding-top: 20px;
+  }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 20px; overflow-x: auto; }
+  .tab-btn {
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: all 0.2s;
+  }
+  .tab-btn:hover { color: var(--text); }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Mini stats row */
+  .mini-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .mini-stat {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 16px;
+    flex: 1;
+    min-width: 130px;
+  }
+  .mini-stat-val { font-size: 20px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .mini-stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--surface); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="header-left">
+      <div class="header-badge"><span></span> LIVE DATA · FY2025</div>
+      <h1>HR Turnover Rate <span class="fy">Dashboard</span></h1>
+      <p class="subtitle">วิเคราะห์อัตราการลาออก · Subcontract (CPP · CKM · TFW) · ข้อมูลรายเดือน</p>
+    </div>
+  </header>
+
+  <!-- Upload Section -->
+  <div class="upload-section">
+    <label for="fileInput">
+      📂 อัปโหลดไฟล์ Excel ใหม่
+    </label>
+    <input type="file" id="fileInput" accept=".xlsx,.xls">
+    <div class="upload-info">
+      <strong>อัปเดตข้อมูลได้ตลอด</strong>
+      เลือกไฟล์ .xlsx ที่มี Sheet "Data All Sub - Month" และ "DATA Resign 2025"<br>
+      Dashboard จะอัปเดตทันทีโดยอัตโนมัติ
+    </div>
+    <div id="uploadStatus"></div>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('overview')">🌐 ภาพรวม</button>
+    <button class="tab-btn" onclick="switchTab('cpp')">🔵 SUB CPP</button>
+    <button class="tab-btn" onclick="switchTab('ckm')">🔴 SUB CKM</button>
+    <button class="tab-btn" onclick="switchTab('tfw')">🟢 SUB TFW</button>
+    <button class="tab-btn" onclick="switchTab('resign')">📋 สาเหตุลาออก</button>
+  </div>
+
+  <!-- OVERVIEW TAB -->
+  <div id="tab-overview" class="tab-panel active">
+    <div class="section-title">สรุปภาพรวม FY2025</div>
+    <div class="kpi-grid" id="kpi-overview"></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">อัตราการลาออกรายเดือน (%)</div>
+        <div class="chart-subtitle">เปรียบเทียบทุก Sub รายเดือน</div>
+        <div class="legend" id="legend-turnover"></div>
+        <div class="chart-wrap"><canvas id="chartTurnover" height="250"></canvas></div>
       </div>
-
-      {/* TABS */}
-      <div style={{display:"flex",gap:2,padding:"0 24px",background:"#04080f",borderBottom:"1px solid #162040",overflowX:"auto"}}>
-        {[["overview","📊 ภาพรวม"],["sub","🏢 แยก Sub"],["reasons","📋 สาเหตุลาออก"],["hc_table","🔢 Headcount"],["resign_table","📝 รายชื่อลาออก"]].map(([k,l])=>(
-          <button key={k} onClick={()=>setTab(k)} style={{padding:"10px 16px",fontSize:12,fontWeight:600,color:tab===k?"#38bdf8":"#3d5070",background:"transparent",border:"none",borderBottom:tab===k?"2px solid #38bdf8":"2px solid transparent",cursor:"pointer",whiteSpace:"nowrap",transition:"all .15s"}}>{l}</button>
-        ))}
-      </div>
-
-      <div style={{padding:"20px 24px"}}>
-        {/* KPI */}
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(165px,1fr))",gap:12,marginBottom:20}}>
-          <div style={{padding:"16px 18px",borderRadius:12,border:"1px solid #4f8ef740",background:"linear-gradient(135deg,#0d1628,#111e3a)",borderLeft:"3px solid #4f8ef7"}}>
-            <div style={{fontSize:10,color:"#6b82aa",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Overall Turnover</div>
-            <div style={{fontSize:26,fontWeight:800,color:"#4f8ef7",letterSpacing:"-1px",lineHeight:1}}>{overTO.toFixed(1)}<span style={{fontSize:13,color:"#6b82aa"}}>%</span></div>
-            <div style={{fontSize:11,color:"#3d5070",marginTop:4,fontFamily:"monospace"}}>{actMonths.length} เดือน · FY2025</div>
-          </div>
-          <div style={{padding:"16px 18px",borderRadius:12,border:"1px solid #fbbf2440",background:"#080e1a",borderLeft:"3px solid #fbbf24"}}>
-            <div style={{fontSize:10,color:"#6b82aa",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>Total Resign</div>
-            <div style={{fontSize:26,fontWeight:800,color:"#fbbf24",letterSpacing:"-1px",lineHeight:1}}>{totR}<span style={{fontSize:13,color:"#6b82aa"}}> คน</span></div>
-            <div style={{fontSize:11,color:"#3d5070",marginTop:4,fontFamily:"monospace"}}>ข้อมูลรายชื่อ {resign.length} คน</div>
-          </div>
-          <div style={{padding:"16px 18px",borderRadius:12,border:"1px solid #34d39940",background:"#080e1a",borderLeft:"3px solid #34d399"}}>
-            <div style={{fontSize:10,color:"#6b82aa",textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>สาเหตุหลัก</div>
-            <div style={{fontSize:26,fontWeight:800,color:"#34d399",letterSpacing:"-1px",lineHeight:1}}>{allReasons.length}<span style={{fontSize:13,color:"#6b82aa"}}> ประเภท</span></div>
-            <div style={{fontSize:11,color:"#3d5070",marginTop:4,fontFamily:"monospace"}}>อันดับ 1: {reasonData[0]?.reason||"-"}</div>
-          </div>
-          {subStats.map(ss=>(
-            <div key={ss.sub} style={{padding:"16px 18px",borderRadius:12,border:`1px solid ${C[ss.sub]}40`,background:"#080e1a",borderLeft:`3px solid ${C[ss.sub]}`}}>
-              <div style={{fontSize:10,color:C[ss.sub],textTransform:"uppercase",letterSpacing:1,marginBottom:6}}>{ss.sub}</div>
-              <div style={{fontSize:26,fontWeight:800,color:C[ss.sub],letterSpacing:"-1px",lineHeight:1}}>{ss.to.toFixed(1)}<span style={{fontSize:13,color:"#6b82aa"}}>%</span></div>
-              <div style={{fontSize:11,color:"#3d5070",marginTop:4,fontFamily:"monospace"}}>{ss.resign} ลาออก · Peak {ss.peak.toFixed(1)}%</div>
-            </div>
-          ))}
-        </div>
-
-        {/* OVERVIEW */}
-        {tab==="overview"&&<>
-          <div style={card}>
-            <div style={ct}>Turnover Rate (%) รายเดือน — แยก Subcontractor</div>
-            <ResponsiveContainer width="100%" height={230}>
-              <LineChart data={monthData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#162040"/>
-                <XAxis dataKey="month" tick={{fill:"#3d5070",fontSize:11}}/>
-                <YAxis tick={{fill:"#3d5070",fontSize:11}} unit="%"/>
-                <Tooltip content={<Tip/>}/>
-                <Legend wrapperStyle={{fontSize:12}}/>
-                {SUBS.map(s=><Line key={s} type="monotone" dataKey={s+"_to"} name={s} stroke={C[s]} strokeWidth={2.5} dot={{r:4}} connectNulls/>)}
-                <Line type="monotone" dataKey="all_to" name="Overall" stroke="#64748b" strokeWidth={1.5} strokeDasharray="4 2" dot={false} connectNulls/>
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <div style={grid2}>
-            <div style={card}>
-              <div style={ct}>Resign รายเดือน (แยก Sub)</div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={monthData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#162040"/>
-                  <XAxis dataKey="month" tick={{fill:"#3d5070",fontSize:10}}/>
-                  <YAxis tick={{fill:"#3d5070",fontSize:10}}/>
-                  <Tooltip content={<Tip/>}/>
-                  <Legend wrapperStyle={{fontSize:11}}/>
-                  {SUBS.map(s=><Bar key={s} dataKey={s+"_re"} name={s} stackId="a" fill={C[s]} fillOpacity={0.85}/>)}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-            <div style={card}>
-              <div style={ct}>Top สาเหตุลาออก (รวมทุก Sub)</div>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={reasonData.slice(0,6)} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#162040"/>
-                  <XAxis type="number" tick={{fill:"#3d5070",fontSize:10}}/>
-                  <YAxis type="category" dataKey="reason" tick={{fill:"#94a3b8",fontSize:10}} width={120}/>
-                  <Tooltip content={<Tip/>}/>
-                  <Bar dataKey="count" name="จำนวน" radius={[0,4,4,0]}>
-                    {reasonData.slice(0,6).map((e,i)=><Cell key={i} fill={REASON_COLORS[e.reason]||"#6b82aa"}/>)}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </>}
-
-        {/* SUB VIEW */}
-        {tab==="sub"&&<>
-          <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
-            {["ALL",...SUBS].map(f=><button key={f} onClick={()=>setSubView(f)} style={fbtn(subView===f,C[f]||"#4f8ef7")}>{f}</button>)}
-          </div>
-          {(subView==="ALL"?SUBS:[subView]).map(sub=>{
-            const sd=data.filter(r=>r.sub===sub).sort((a,b)=>MONTHS.indexOf(a.month)-MONTHS.indexOf(b.month));
-            const sr=resignM.filter(r=>r.sub===sub);
-            const rc={};sr.forEach(r=>{rc[r.reason]=(rc[r.reason]||0)+1;});
-            const rPie=Object.entries(rc).map(([reason,value])=>({reason,value})).sort((a,b)=>b.value-a.value);
-            const ss=subStats.find(x=>x.sub===sub);
-            return(
-              <div key={sub} style={{...card,borderLeft:`3px solid ${C[sub]}`}}>
-                <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:14,flexWrap:"wrap"}}>
-                  <span style={{fontSize:13,fontWeight:700,color:C[sub]}}>{sub}</span>
-                  <span style={pill(ss?.to||0)}>{ss?.to.toFixed(1)}% avg</span>
-                  <span style={{fontSize:12,color:"#6b82aa",fontFamily:"monospace"}}>{ss?.resign} ลาออก · Peak {ss?.peak.toFixed(1)}%</span>
-                  <span style={{fontSize:12,color:"#6b82aa",fontFamily:"monospace"}}>ข้อมูลรายชื่อ: {sr.length} คน</span>
-                </div>
-                <div style={grid2}>
-                  <div>
-                    <div style={ct}>Turnover % รายเดือน</div>
-                    <ResponsiveContainer width="100%" height={170}>
-                      <BarChart data={sd}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#162040"/>
-                        <XAxis dataKey="month" tick={{fill:"#3d5070",fontSize:10}}/>
-                        <YAxis tick={{fill:"#3d5070",fontSize:10}} unit="%"/>
-                        <Tooltip content={<Tip/>}/>
-                        <Bar dataKey="turnover" name="Turnover %" radius={[4,4,0,0]}>
-                          {sd.map((e,i)=><Cell key={i} fill={e.turnover>30?"#f87171":C[sub]} fillOpacity={0.85}/>)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div>
-                    <div style={ct}>สาเหตุลาออก ({sr.length} คน)</div>
-                    {rPie.length>0?<ResponsiveContainer width="100%" height={170}>
-                      <PieChart>
-                        <Pie data={rPie} dataKey="value" nameKey="reason" cx="50%" cy="50%" outerRadius={60} label={({percent})=>`${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={10}>
-                          {rPie.map((e,i)=><Cell key={i} fill={REASON_COLORS[e.reason]||"#6b82aa"}/>)}
-                        </Pie>
-                        <Tooltip formatter={(v,n)=>[v+" คน",n]}/>
-                        <Legend iconSize={8} wrapperStyle={{fontSize:10}}/>
-                      </PieChart>
-                    </ResponsiveContainer>:<div style={{height:170,display:"flex",alignItems:"center",justifyContent:"center",color:"#3d5070",fontSize:12}}>ไม่มีข้อมูลสาเหตุ</div>}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </>}
-
-        {/* REASONS */}
-        {tab==="reasons"&&<>
-          <div style={card}>
-            <div style={ct}>สาเหตุลาออก รายเดือน (ทุก Sub สะสม)</div>
-            <ResponsiveContainer width="100%" height={220}>
-              <BarChart data={reasonByMonth}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#162040"/>
-                <XAxis dataKey="month" tick={{fill:"#3d5070",fontSize:11}}/>
-                <YAxis tick={{fill:"#3d5070",fontSize:11}}/>
-                <Tooltip content={<Tip/>}/>
-                <Legend wrapperStyle={{fontSize:10}} iconSize={8}/>
-                {allReasons.map(r=><Bar key={r} dataKey={r} stackId="a" fill={REASON_COLORS[r]||"#6b82aa"} name={r}/>)}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          <div style={grid2}>
-            <div style={card}>
-              <div style={ct}>สัดส่วนสาเหตุทั้งหมด ({resign.length} คน)</div>
-              <ResponsiveContainer width="100%" height={230}>
-                <PieChart>
-                  <Pie data={reasonData} dataKey="count" nameKey="reason" cx="50%" cy="50%" outerRadius={80} label={({percent})=>`${(percent*100).toFixed(0)}%`} labelLine={false} fontSize={10}>
-                    {reasonData.map((e,i)=><Cell key={i} fill={REASON_COLORS[e.reason]||"#6b82aa"}/>)}
-                  </Pie>
-                  <Tooltip formatter={(v,n)=>[v+" คน",n]}/>
-                  <Legend iconSize={8} wrapperStyle={{fontSize:10}}/>
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div style={card}>
-              <div style={ct}>สาเหตุลาออก แยก Sub</div>
-              <ResponsiveContainer width="100%" height={230}>
-                <BarChart data={reasonBySub}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#162040"/>
-                  <XAxis dataKey="sub" tick={{fill:"#94a3b8",fontSize:10}}/>
-                  <YAxis tick={{fill:"#3d5070",fontSize:10}}/>
-                  <Tooltip content={<Tip/>}/>
-                  <Legend wrapperStyle={{fontSize:10}} iconSize={8}/>
-                  {allReasons.map(r=><Bar key={r} dataKey={r} stackId="a" fill={REASON_COLORS[r]||"#6b82aa"} name={r}/>)}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div style={{...card,marginTop:0}}>
-            <div style={ct}>สัญลักษณ์สี — ประเภทสาเหตุ</div>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-              {Object.entries(REASON_COLORS).map(([r,c])=>(
-                <div key={r} style={{display:"flex",alignItems:"center",gap:5,padding:"3px 10px",background:c+"15",borderRadius:6,border:`1px solid ${c}40`}}>
-                  <span style={{width:7,height:7,borderRadius:"50%",background:c,display:"inline-block"}}/>
-                  <span style={{fontSize:11,color:c}}>{r}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </>}
-
-        {/* HC TABLE */}
-        {tab==="hc_table"&&<>
-          <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center",flexWrap:"wrap"}}>
-            {["ALL",...SUBS].map(f=><button key={f} onClick={()=>setFSubHC(f)} style={fbtn(fSubHC===f,C[f]||"#4f8ef7")}>{f}</button>)}
-            <button onClick={()=>setShowAddHC(v=>!v)} style={{...addBtn,marginLeft:"auto"}}>+ เพิ่มข้อมูล</button>
-          </div>
-          {showAddHC&&<div style={addForm}>
-            {[{k:"month",label:"Month",type:"sel",opts:MONTHS},{k:"sub",label:"Sub",type:"sel",opts:SUBS},{k:"start",label:"Start HC"},{k:"end",label:"End HC"},{k:"resign",label:"Resign"}].map(f=>(
-              <div key={f.k}>
-                <div style={{fontSize:10,color:"#6b82aa",marginBottom:4}}>{f.label}</div>
-                {f.type==="sel"?<select value={newHC[f.k]} onChange={e=>setNewHC(r=>({...r,[f.k]:e.target.value}))} style={sel_s}>{f.opts.map(o=><option key={o}>{o}</option>)}</select>
-                :<input type="number" value={newHC[f.k]} onChange={e=>setNewHC(r=>({...r,[f.k]:e.target.value}))} placeholder="0" style={numinp_s}/>}
-              </div>
-            ))}
-            <button onClick={addHCfn} style={{padding:"7px 14px",background:"#38bdf8",border:"none",borderRadius:7,color:"#04080f",fontSize:12,fontWeight:700,cursor:"pointer"}}>เพิ่ม</button>
-            <button onClick={()=>setShowAddHC(false)} style={{padding:"7px 12px",background:"transparent",border:"1px solid #1e2d52",borderRadius:7,color:"#6b82aa",fontSize:12,cursor:"pointer"}}>ยกเลิก</button>
-          </div>}
-          <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #162040"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-              <thead><tr>{["Month","Sub","Start HC","End HC","Avg HC","Resign","Turnover %",""].map((h,i)=>(
-                <th key={i} style={{padding:"9px 12px",background:"#0d1628",color:"#3d5070",fontWeight:600,fontSize:10,textTransform:"uppercase",letterSpacing:.8,textAlign:i<2?"left":"right",borderBottom:"1px solid #162040",whiteSpace:"nowrap"}}>{h}</th>
-              ))}</tr></thead>
-              <tbody>{tableHC.map((row,i)=>(
-                <tr key={row.id} style={{background:i%2===0?"#04080f":"#06090f",borderBottom:"1px solid #0d1628"}}>
-                  <td style={{padding:"8px 12px",fontFamily:"monospace",color:"#6b82aa",fontWeight:600}}>{row.month}</td>
-                  <td style={{padding:"8px 12px"}}><span style={{padding:"2px 8px",borderRadius:4,fontSize:11,fontWeight:700,background:stag[row.sub]?.bg,color:stag[row.sub]?.c}}>{row.sub}</span></td>
-                  {["start","end"].map(f=>(
-                    <td key={f} style={{padding:"8px 12px",textAlign:"right"}}>
-                      <input type="number" value={row[f]} onChange={e=>updHC(row.id,f,e.target.value)} style={inp}
-                        onFocus={e=>{e.target.style.borderColor="#38bdf8";e.target.style.background="#0d1628";}}
-                        onBlur={e=>{e.target.style.borderColor="transparent";e.target.style.background="transparent";}}/>
-                    </td>
-                  ))}
-                  <td style={{padding:"8px 12px",textAlign:"right",fontFamily:"monospace",color:"#6b82aa"}}>{row.avg.toFixed(1)}</td>
-                  <td style={{padding:"8px 12px",textAlign:"right"}}>
-                    <input type="number" value={row.resign} onChange={e=>updHC(row.id,"resign",e.target.value)} style={inp}
-                      onFocus={e=>{e.target.style.borderColor="#38bdf8";e.target.style.background="#0d1628";}}
-                      onBlur={e=>{e.target.style.borderColor="transparent";e.target.style.background="transparent";}}/>
-                  </td>
-                  <td style={{padding:"8px 12px",textAlign:"right"}}><span style={pill(row.turnover)}>{row.turnover.toFixed(2)}%</span></td>
-                  <td style={{padding:"8px 12px",textAlign:"right"}}>
-                    <button onClick={()=>delHC(row.id)} style={{background:"transparent",border:"1px solid #f8717130",color:"#f87171",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:11}}>✕</button>
-                  </td>
-                </tr>
-              ))}</tbody>
-            </table>
-          </div>
-          <p style={{fontSize:11,color:"#1e2d52",marginTop:8}}>💡 คลิกตัวเลขเพื่อแก้ไข · บันทึกอัตโนมัติ</p>
-        </>}
-
-        {/* RESIGN TABLE */}
-        {tab==="resign_table"&&<>
-          <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center",flexWrap:"wrap"}}>
-            {["ALL",...SUBS].map(f=><button key={f} onClick={()=>setFSubR(f)} style={fbtn(fSubR===f,C[f]||"#4f8ef7")}>{f}</button>)}
-            <select value={fReason} onChange={e=>setFReason(e.target.value)} style={{...sel_s,marginLeft:8}}>
-              <option value="ALL">ทุกสาเหตุ</option>
-              {allReasons.map(r=><option key={r} value={r}>{r}</option>)}
-            </select>
-            <button onClick={()=>setShowAddR(v=>!v)} style={{...addBtn,marginLeft:"auto"}}>+ เพิ่มรายการ</button>
-          </div>
-          {showAddR&&<div style={addForm}>
-            {[{k:"code",label:"รหัส",w:90},{k:"name",label:"ชื่อ-สกุล",w:150},{k:"sub",label:"Sub",type:"sel",opts:SUBS},{k:"dep",label:"แผนก",w:70},{k:"startWork",label:"เริ่มงาน",type:"date"},{k:"dateResign",label:"วันลาออก",type:"date"},{k:"reason",label:"สาเหตุ",type:"ssel"}].map(f=>(
-              <div key={f.k}>
-                <div style={{fontSize:10,color:"#6b82aa",marginBottom:4}}>{f.label}</div>
-                {f.type==="sel"?<select value={newR[f.k]} onChange={e=>setNewR(r=>({...r,[f.k]:e.target.value}))} style={sel_s}>{f.opts.map(o=><option key={o}>{o}</option>)}</select>
-                :f.type==="ssel"?<select value={newR[f.k]} onChange={e=>setNewR(r=>({...r,[f.k]:e.target.value}))} style={sel_s}>{Object.keys(REASON_COLORS).map(o=><option key={o}>{o}</option>)}</select>
-                :f.type==="date"?<input type="date" value={newR[f.k]} onChange={e=>setNewR(r=>({...r,[f.k]:e.target.value}))} style={sel_s}/>
-                :<input type="text" value={newR[f.k]} onChange={e=>setNewR(r=>({...r,[f.k]:e.target.value}))} style={{...txtinp_s,width:f.w||100}}/>}
-              </div>
-            ))}
-            <button onClick={addRfn} style={{padding:"7px 14px",background:"#38bdf8",border:"none",borderRadius:7,color:"#04080f",fontSize:12,fontWeight:700,cursor:"pointer"}}>เพิ่ม</button>
-            <button onClick={()=>setShowAddR(false)} style={{padding:"7px 12px",background:"transparent",border:"1px solid #1e2d52",borderRadius:7,color:"#6b82aa",fontSize:12,cursor:"pointer"}}>ยกเลิก</button>
-          </div>}
-          <p style={{fontSize:11,color:"#6b82aa",marginBottom:8,fontFamily:"monospace"}}>แสดง {tableR.length} / {resign.length} รายการ</p>
-          <div style={{overflowX:"auto",borderRadius:10,border:"1px solid #162040"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
-              <thead><tr>{["รหัส","ชื่อ-นามสกุล","Sub","แผนก","เริ่มงาน","วันลาออก","สาเหตุ",""].map((h,i)=>(
-                <th key={i} style={{padding:"9px 12px",background:"#0d1628",color:"#3d5070",fontWeight:600,fontSize:10,textTransform:"uppercase",letterSpacing:.8,textAlign:"left",borderBottom:"1px solid #162040",whiteSpace:"nowrap"}}>{h}</th>
-              ))}</tr></thead>
-              <tbody>{tableR.map((row,i)=>{
-                const rc=REASON_COLORS[row.reason]||"#6b82aa";
-                return(<tr key={row.id} style={{background:i%2===0?"#04080f":"#06090f",borderBottom:"1px solid #0d1628"}}>
-                  <td style={{padding:"8px 12px",fontFamily:"monospace",color:"#3d5070",fontSize:11}}>{row.code}</td>
-                  <td style={{padding:"8px 12px",color:"#dce8ff",maxWidth:160,fontSize:12}}>{row.name}</td>
-                  <td style={{padding:"8px 12px"}}><span style={{padding:"2px 8px",borderRadius:4,fontSize:11,fontWeight:700,background:stag[row.sub]?.bg||"#1e293b",color:stag[row.sub]?.c||"#94a3b8"}}>{row.sub}</span></td>
-                  <td style={{padding:"8px 12px",color:"#6b82aa",fontFamily:"monospace",fontSize:11}}>{row.dep}</td>
-                  <td style={{padding:"8px 12px",color:"#3d5070",fontFamily:"monospace",fontSize:11}}>{row.startWork?.slice(0,10)}</td>
-                  <td style={{padding:"8px 12px",color:"#94a3b8",fontFamily:"monospace",fontSize:11}}>{row.dateResign?.slice(0,10)}</td>
-                  <td style={{padding:"8px 12px"}}><span style={{padding:"2px 8px",borderRadius:4,fontSize:11,fontWeight:600,background:rc+"20",color:rc}}>{row.reason}</span></td>
-                  <td style={{padding:"8px 12px"}}><button onClick={()=>delR(row.id)} style={{background:"transparent",border:"1px solid #f8717130",color:"#f87171",borderRadius:5,padding:"2px 7px",cursor:"pointer",fontSize:11}}>✕</button></td>
-                </tr>);
-              })}</tbody>
-            </table>
-          </div>
-          <p style={{fontSize:11,color:"#1e2d52",marginTop:8}}>💡 กรองด้วย Sub หรือสาเหตุ · เพิ่ม/ลบรายการได้ · บันทึกอัตโนมัติ</p>
-        </>}
+      <div class="chart-card">
+        <div class="chart-title">จำนวนการลาออกสะสม</div>
+        <div class="chart-subtitle">Total Resign ตลอดปี แต่ละ Sub</div>
+        <div class="chart-wrap"><canvas id="chartResignBar" height="250"></canvas></div>
       </div>
     </div>
-  );
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Headcount รายเดือน (End HC)</div>
+        <div class="chart-subtitle">จำนวนพนักงานสิ้นเดือนแต่ละ Sub</div>
+        <div class="chart-wrap"><canvas id="chartHeadcount" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">สัดส่วนการลาออก</div>
+        <div class="chart-subtitle">% แต่ละ Sub ต่อยอดรวม</div>
+        <div class="chart-wrap" style="max-height:220px;display:flex;align-items:center;justify-content:center;">
+          <canvas id="chartDoughnut" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="chart-title" style="margin-bottom:4px;">ตารางสรุปรายเดือน — ภาพรวม</div>
+      <div class="chart-subtitle">รวม Resign และ Turnover % ทุก Sub ต่อเดือน</div>
+      <table id="tableOverview">
+        <thead><tr>
+          <th>เดือน</th>
+          <th>SUB CPP — Resign</th><th>CPP Rate%</th>
+          <th>SUB CKM — Resign</th><th>CKM Rate%</th>
+          <th>SUB TFW — Resign</th><th>TFW Rate%</th>
+          <th>รวม Resign</th>
+        </tr></thead>
+        <tbody id="tableOverviewBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CPP TAB -->
+  <div id="tab-cpp" class="tab-panel">
+    <div class="section-title" style="--accent: var(--cpp)">SUB CPP — รายละเอียด</div>
+    <div class="mini-stats" id="mini-cpp"></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Turnover Rate % — SUB CPP</div>
+        <div class="chart-subtitle">รายเดือน FY2025</div>
+        <div class="chart-wrap"><canvas id="chartCppRate" height="240"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Headcount vs Resign — SUB CPP</div>
+        <div class="chart-subtitle">HC เฉลี่ยและจำนวนลาออกรายเดือน</div>
+        <div class="chart-wrap"><canvas id="chartCppHC" height="240"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CKM TAB -->
+  <div id="tab-ckm" class="tab-panel">
+    <div class="section-title">SUB CKM — รายละเอียด</div>
+    <div class="mini-stats" id="mini-ckm"></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Turnover Rate % — SUB CKM</div>
+        <div class="chart-subtitle">รายเดือน FY2025</div>
+        <div class="chart-wrap"><canvas id="chartCkmRate" height="240"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Headcount vs Resign — SUB CKM</div>
+        <div class="chart-subtitle">HC เฉลี่ยและจำนวนลาออกรายเดือน</div>
+        <div class="chart-wrap"><canvas id="chartCkmHC" height="240"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TFW TAB -->
+  <div id="tab-tfw" class="tab-panel">
+    <div class="section-title">SUB TFW — รายละเอียด</div>
+    <div class="mini-stats" id="mini-tfw"></div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Turnover Rate % — SUB TFW</div>
+        <div class="chart-subtitle">รายเดือน FY2025</div>
+        <div class="chart-wrap"><canvas id="chartTfwRate" height="240"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Headcount vs Resign — SUB TFW</div>
+        <div class="chart-subtitle">HC เฉลี่ยและจำนวนลาออกรายเดือน</div>
+        <div class="chart-wrap"><canvas id="chartTfwHC" height="240"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESIGN TAB -->
+  <div id="tab-resign" class="tab-panel">
+    <div class="section-title">สาเหตุการลาออก FY2025</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Top สาเหตุการลาออก</div>
+        <div class="chart-subtitle">จำนวนรวมทุก Sub</div>
+        <div class="reason-list" id="reasonList"></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">สาเหตุแยกตาม Sub</div>
+        <div class="chart-subtitle">เปรียบเทียบ CPP · CKM · TFW</div>
+        <div class="chart-wrap"><canvas id="chartReasonSub" height="280"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">สาเหตุรายเดือน</div>
+        <div class="chart-subtitle">แนวโน้มสาเหตุลาออกตลอดปี</div>
+        <div class="chart-wrap"><canvas id="chartReasonMonth" height="240"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">แยกตาม Section</div>
+        <div class="chart-subtitle">Top 10 Section ที่มีการลาออกมากสุด</div>
+        <div class="chart-wrap"><canvas id="chartSection" height="240"></canvas></div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="chart-title" style="margin-bottom:4px;">รายการลาออกทั้งหมด</div>
+      <div class="chart-subtitle">DATA Resign 2025 — ค้นหาและกรองได้</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+        <input id="searchInput" type="text" placeholder="🔍 ค้นหาชื่อ / Section..." style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:4px;font-family:inherit;font-size:13px;flex:1;min-width:200px;outline:none;">
+        <select id="filterSub" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:4px;font-family:inherit;font-size:13px;outline:none;">
+          <option value="">ทุก Sub</option>
+          <option>SUB CPP</option><option>SUB CKM</option><option>SUB TFW</option>
+        </select>
+        <select id="filterMonth" style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:7px 12px;border-radius:4px;font-family:inherit;font-size:13px;outline:none;">
+          <option value="">ทุกเดือน</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="resignTable">
+          <thead><tr>
+            <th>#</th><th>รหัสพนักงาน</th><th>ชื่อ</th><th>Section</th><th>Sub</th><th>เดือน</th><th>สาเหตุ</th>
+          </tr></thead>
+          <tbody id="resignTableBody"></tbody>
+        </table>
+      </div>
+      <div id="tableCount" style="font-size:11px;color:var(--muted);margin-top:10px;font-family:'JetBrains Mono',monospace;"></div>
+    </div>
+  </div>
+
+  <footer>HR ANALYTICS DASHBOARD · FY2025 · SUBCONTRACT DIVISION · DATA AUTO-UPDATES ON EXCEL UPLOAD</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ========== EMBEDDED DATA (auto-replaced on upload) ==========
+let SHEET1 = [{"month":"JAN","sub":"SUB CPP","start_hc":284.0,"end_hc":274.0,"avg_hc":279.0,"resign":12,"turnover_pct":4.3011},{"month":"JAN","sub":"SUB CKM","start_hc":104.0,"end_hc":96.0,"avg_hc":100.0,"resign":17,"turnover_pct":17.0},{"month":"JAN","sub":"SUB TFW","start_hc":0.0,"end_hc":3.0,"avg_hc":1.5,"resign":0,"turnover_pct":0.0},{"month":"FEB","sub":"SUB CPP","start_hc":274.0,"end_hc":265.0,"avg_hc":269.5,"resign":9,"turnover_pct":3.3395},{"month":"FEB","sub":"SUB CKM","start_hc":96.0,"end_hc":95.0,"avg_hc":95.5,"resign":15,"turnover_pct":15.7068},{"month":"FEB","sub":"SUB TFW","start_hc":3.0,"end_hc":11.0,"avg_hc":7.0,"resign":2,"turnover_pct":28.5714},{"month":"MAR","sub":"SUB CPP","start_hc":265.0,"end_hc":260.0,"avg_hc":262.5,"resign":5,"turnover_pct":1.9048},{"month":"MAR","sub":"SUB CKM","start_hc":95.0,"end_hc":100.0,"avg_hc":97.5,"resign":11,"turnover_pct":11.2821},{"month":"MAR","sub":"SUB TFW","start_hc":11.0,"end_hc":17.0,"avg_hc":14.0,"resign":8,"turnover_pct":57.1429},{"month":"APR","sub":"SUB CPP","start_hc":260.0,"end_hc":253.0,"avg_hc":256.5,"resign":10,"turnover_pct":3.8986},{"month":"APR","sub":"SUB CKM","start_hc":100.0,"end_hc":104.0,"avg_hc":102.0,"resign":12,"turnover_pct":11.7647},{"month":"APR","sub":"SUB TFW","start_hc":17.0,"end_hc":19.0,"avg_hc":18.0,"resign":11,"turnover_pct":61.1111},{"month":"MAY","sub":"SUB CPP","start_hc":253.0,"end_hc":261.0,"avg_hc":257.0,"resign":7,"turnover_pct":2.7237},{"month":"MAY","sub":"SUB CKM","start_hc":104.0,"end_hc":138.0,"avg_hc":121.0,"resign":14,"turnover_pct":11.5702},{"month":"MAY","sub":"SUB TFW","start_hc":19.0,"end_hc":44.0,"avg_hc":31.5,"resign":24,"turnover_pct":76.1905},{"month":"JUN","sub":"SUB CPP","start_hc":261.0,"end_hc":248.0,"avg_hc":254.5,"resign":13,"turnover_pct":5.1081},{"month":"JUN","sub":"SUB CKM","start_hc":138.0,"end_hc":145.0,"avg_hc":141.5,"resign":23,"turnover_pct":16.2544},{"month":"JUN","sub":"SUB TFW","start_hc":44.0,"end_hc":50.0,"avg_hc":47.0,"resign":15,"turnover_pct":31.9149},{"month":"JUL","sub":"SUB CPP","start_hc":248.0,"end_hc":246.0,"avg_hc":247.0,"resign":2,"turnover_pct":0.8097},{"month":"JUL","sub":"SUB CKM","start_hc":145.0,"end_hc":152.0,"avg_hc":148.5,"resign":24,"turnover_pct":16.1616},{"month":"JUL","sub":"SUB TFW","start_hc":50.0,"end_hc":52.0,"avg_hc":51.0,"resign":19,"turnover_pct":37.2549},{"month":"AUG","sub":"SUB CPP","start_hc":246.0,"end_hc":242.0,"avg_hc":244.0,"resign":4,"turnover_pct":1.6393},{"month":"AUG","sub":"SUB CKM","start_hc":152.0,"end_hc":158.0,"avg_hc":155.0,"resign":13,"turnover_pct":8.3871},{"month":"AUG","sub":"SUB TFW","start_hc":52.0,"end_hc":57.0,"avg_hc":54.5,"resign":12,"turnover_pct":22.0183},{"month":"SEP","sub":"SUB CPP","start_hc":242.0,"end_hc":241.0,"avg_hc":241.5,"resign":1,"turnover_pct":0.4141},{"month":"SEP","sub":"SUB CKM","start_hc":158.0,"end_hc":151.0,"avg_hc":154.5,"resign":18,"turnover_pct":11.6505},{"month":"SEP","sub":"SUB TFW","start_hc":57.0,"end_hc":64.0,"avg_hc":60.5,"resign":4,"turnover_pct":6.6116},{"month":"OCT","sub":"SUB CPP","start_hc":241.0,"end_hc":237.0,"avg_hc":239.0,"resign":4,"turnover_pct":1.6736},{"month":"OCT","sub":"SUB CKM","start_hc":151.0,"end_hc":161.0,"avg_hc":156.0,"resign":14,"turnover_pct":8.9744},{"month":"OCT","sub":"SUB TFW","start_hc":64.0,"end_hc":66.0,"avg_hc":65.0,"resign":15,"turnover_pct":23.0769},{"month":"NOV","sub":"SUB CPP","start_hc":237.0,"end_hc":235.0,"avg_hc":236.0,"resign":2,"turnover_pct":0.8475},{"month":"NOV","sub":"SUB CKM","start_hc":161.0,"end_hc":178.0,"avg_hc":169.5,"resign":11,"turnover_pct":6.4897},{"month":"NOV","sub":"SUB TFW","start_hc":66.0,"end_hc":69.0,"avg_hc":67.5,"resign":9,"turnover_pct":13.3333},{"month":"DEC","sub":"SUB CPP","start_hc":235.0,"end_hc":234.0,"avg_hc":234.5,"resign":1,"turnover_pct":0.4264},{"month":"DEC","sub":"SUB CKM","start_hc":178.0,"end_hc":174.0,"avg_hc":176.0,"resign":5,"turnover_pct":2.8409},{"month":"DEC","sub":"SUB TFW","start_hc":69.0,"end_hc":70.0,"avg_hc":69.5,"resign":3,"turnover_pct":4.3165}];
+
+let SHEET2 = [{"code": "40000167", "name": "นายวัชรินทร์  แก้วปุ่ม", "section": "BHA", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000190", "name": "นายณัฐพันธ์  คล้ายเผือก", "section": "BHA", "sub": "SUB TFW", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "50000697", "name": "นายชาญชัย เสาร์นอก", "section": "BHA", "sub": "SUB CKM", "month": "OCT", "reason": "กลับต่างจังหวัด"}, {"code": "50000729", "name": "นายภูรินาท โคกกลาง", "section": "BHA", "sub": "SUB CKM", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "1003793", "name": "น.ส.ณัฐธิดา  บุญหล้า", "section": "BHA", "sub": "SUB CPP", "month": "SEP", "reason": "กลับต่างจังหวัด"}, {"code": "1004300", "name": "น.ส.เข็มพิมล พัจนา", "section": "BHA", "sub": "SUB CPP", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "1004256", "name": "นายอนุชัย  พลสูงเนิน", "section": "FUB", "sub": "SUB CPP", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000288", "name": "นายมงคลชัย  สาตะสิน", "section": "FUB", "sub": "SUB CKM", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000328", "name": "นายธนพล  เดชสิริ", "section": "FUB", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000472", "name": "นายชาญณรงค์ แสนโบราณ", "section": "FUB", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "1004121", "name": "น.ส.ลัดดาวัลย์  จันทะผล", "section": "INB", "sub": "SUB CPP", "month": "APR", "reason": "กลับต่างจังหวัด"}, {"code": "40000014", "name": "นายกรีฑา อ่อนลี", "section": "INB", "sub": "SUB TFW", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "40000016", "name": "นายณัฐพล ยะสุยา", "section": "INB", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000034", "name": "นายณัฐพล ศรีหนา", "section": "INB", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000038", "name": "น.ส.ชลิตา ธรรมสมบัติ", "section": "INB", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000118", "name": "น.ส.กมลทิพย์  นิลไสล", "section": "INB", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000147", "name": "นายธนพล ปาวี", "section": "INB", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000168", "name": "นายศิวกร  มะณีสาย", "section": "INB", "sub": "SUB TFW", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "40000180", "name": "น.ส.รุ่งทิวา วันประโคน", "section": "INB", "sub": "SUB TFW", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "40000183", "name": "นายชัยพร แช่ตั้ง", "section": "INB", "sub": "SUB TFW", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "50000275", "name": "นายชินวัตร  อิ่นคำ", "section": "INB", "sub": "SUB CKM", "month": "AUG", "reason": "กลับต่างจังหวัด"}, {"code": "50000333", "name": "นายพงษ์นฤทธิ์  อุ่นคำ", "section": "INB", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000478", "name": "นายอนุรุต ปิดตังนาโพ", "section": "INB", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000559", "name": "น.ส.ธนัญญา ตุ้มชู", "section": "INB", "sub": "SUB CKM", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000629", "name": "นายจรูญศักดิ์  ตีกา", "section": "INB", "sub": "SUB CKM", "month": "JUL", "reason": "กลับต่างจังหวัด"}, {"code": "1003900", "name": "นายธีรยุทธ  วาพันสุ", "section": "INC", "sub": "SUB CPP", "month": "APR", "reason": "กลับต่างจังหวัด"}, {"code": "1003927", "name": "นายประกอบ ตุ่นใจ", "section": "INC", "sub": "SUB CPP", "month": "JAN", "reason": "กลับต่างจังหวัด"}, {"code": "1003929", "name": "นายชลาสินธุ์  แสงอาทิตย์", "section": "INC", "sub": "SUB CPP", "month": "JUN", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "1004259", "name": "น.ส.ณัจฉรียา  ศรีทอง", "section": "INC", "sub": "SUB CPP", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "1004266", "name": "น.ส.ธนัชพร  บังศรี", "section": "INC", "sub": "SUB CPP", "month": "MAY", "reason": "เหตุผลส่วนตัว"}, {"code": "1004514", "name": "นายสุรเดช  ซึ่งจะโปะ", "section": "INC", "sub": "SUB CPP", "month": "JUN", "reason": "เหตุผลส่วนตัว"}, {"code": "1004719", "name": "นายศราวุธ บุญจิตร", "section": "INC", "sub": "SUB CPP", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000013", "name": "นายเอนก ชิณศรี", "section": "INC", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000015", "name": "นายอัครพล พระยอมหอม", "section": "INC", "sub": "SUB TFW", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "40000035", "name": "นายกิตติพงษ มะฤทธิ์", "section": "INC", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000036", "name": "นายวัชระ นันไชยกัน", "section": "INC", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000037", "name": "นายธนวัฒน์ ราชตะจักร์", "section": "INC", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000039", "name": "น.ส.กมลพรรณ สุวรรณ์ประเสริฐ", "section": "INC", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000072", "name": "น.ส.ศิริวรรณ คลองจิต", "section": "INC", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000089", "name": "น.ส.พิชญ์ชญา ชาฏหงอก", "section": "INC", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000112", "name": "นายศุปตินาถ  ศรีจันทร์อ่อน", "section": "INC", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000113", "name": "นายฤทธิพร สัตย์ซื่อ", "section": "INC", "sub": "SUB TFW", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "40000115", "name": "น.ส.นุศรา  โยงรัมย์", "section": "INC", "sub": "SUB TFW", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "40000116", "name": "น.ส.ชลธิชา  ดัชถุยาวัตร", "section": "INC", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000144", "name": "น.ส.สุพัตรา อัครสูริย์", "section": "INC", "sub": "SUB TFW", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "40000150", "name": "น.ส.จิราวรรณ  ชัยนาม", "section": "INC", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "50000154", "name": "น.ส.จริยา  เศษศุวรรณ", "section": "INC", "sub": "SUB CKM", "month": "OCT", "reason": "ปรับบรรจุ"}, {"code": "50000309", "name": "น.ส.ลัดดาวัลย์  หวาสุข", "section": "INC", "sub": "SUB CKM", "month": "JUN", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "50000521", "name": "นายอนุวัฒน์ ประทุมพิมพ์", "section": "INC", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000614", "name": "น.ส.ปารนัทธ์ อาจภักดี", "section": "INC", "sub": "SUB CKM", "month": "JUN", "reason": "กลับต่างจังหวัด"}, {"code": "50000696", "name": "นายสหรัถ  โจทย์จันทร์", "section": "INC", "sub": "SUB CKM", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "1001667", "name": "นายอรรถพร  คำนาแซง", "section": "INE", "sub": "SUB CPP", "month": "APR", "reason": "ปรับบรรจุ"}, {"code": "1002623", "name": "นายบุญส่ง  สิมมา", "section": "INE", "sub": "SUB CPP", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "1004680", "name": "นายศุรีชัย ค้างคีรี", "section": "INE", "sub": "SUB CPP", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "1004760", "name": "นายวีรวัฒน์ เจริญราษฎร์", "section": "INE", "sub": "SUB CPP", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "1004761", "name": "น.ส.พนิดา ฉิมงาม", "section": "INE", "sub": "SUB CPP", "month": "JUN", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "50000597", "name": "นายอานนท์ อุลเว", "section": "INE", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000607", "name": "นายนันทวัฒน์ วุธศรี", "section": "INE", "sub": "SUB CKM", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000705", "name": "นายอดิเทพ  พรรัมย์", "section": "INE", "sub": "SUB CKM", "month": "OCT", "reason": "ขาดงาน 3 วัน"}, {"code": "50000706", "name": "นายพงศ์พล  บุญเสนา", "section": "INE", "sub": "SUB CKM", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "50000708", "name": "นายนันทวัฒน์  ทานันท์", "section": "INE", "sub": "SUB CKM", "month": "OCT", "reason": "ขาดงาน 3 วัน"}, {"code": "50000714", "name": "นายอัมรินทร์  บุญยอ", "section": "INE", "sub": "SUB CKM", "month": "OCT", "reason": "กลับต่างจังหวัด"}, {"code": "50000732", "name": "นายธราธิป ก้องหิรัญกุล", "section": "INE", "sub": "SUB CKM", "month": "NOV", "reason": "กลับต่างจังหวัด"}, {"code": "50000734", "name": "นายสิทธิพงศ์ บุตรลักษณ์", "section": "INE", "sub": "SUB CKM", "month": "DEC", "reason": "ได้งานใหม่"}, {"code": "50000737", "name": "นายกรวิชญ์ วงษ์ยอด", "section": "INE", "sub": "SUB CKM", "month": "NOV", "reason": "ขาดงาน 3 วัน"}, {"code": "50000743", "name": "นายพงศ์พล  อรัญชัย", "section": "INE", "sub": "SUB CKM", "month": "DEC", "reason": "ได้งานใหม่"}, {"code": "1002634", "name": "นายกำธร  วารีศรี", "section": "INI", "sub": "SUB CPP", "month": "JAN", "reason": "กลับต่างจังหวัด"}, {"code": "1003289", "name": "นายวุฒิพงษ์  ดาศรี", "section": "INI", "sub": "SUB CPP", "month": "OCT", "reason": "ปรับบรรจุ"}, {"code": "1004372", "name": "นายญัฐพงษ์ สุดตา", "section": "INI", "sub": "SUB CPP", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000715", "name": "นายศักดิ์เพชร  หอมชาลี", "section": "INI", "sub": "SUB CKM", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "50000746", "name": "นายจิณณวุฒิ เชยประโคน", "section": "INI", "sub": "SUB CKM", "month": "DEC", "reason": "ได้งานใหม่"}, {"code": "1004600", "name": "นายวรชัย  ประชุมวรรณ์", "section": "MTC", "sub": "SUB CPP", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "1004620", "name": "นายศุภกร  บรรดาสิทธิ์", "section": "MTC", "sub": "SUB CPP", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000641", "name": "นายธนวัฒน์  วายลม", "section": "MTC", "sub": "SUB CKM", "month": "JUL", "reason": "กลับต่างจังหวัด"}, {"code": "40000090", "name": "น.ส.ปิยะพร เหลือล้น", "section": "PAC", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "1004749", "name": "นายวีรภาพ ลาพมาก", "section": "PAC", "sub": "SUB CPP", "month": "JUN", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "40000047", "name": "น.ส.สุภาพร ดอนเงิน", "section": "PAC", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000569", "name": "น.ส.ปรียานุช เพ็ชรแท้", "section": "PAC", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "1004666", "name": "นายอัคเดช สินกังวาน", "section": "DSP", "sub": "SUB CPP", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000657", "name": "นายเดชา  คุ้มครอง", "section": "DSP", "sub": "SUB CKM", "month": "SEP", "reason": "กลับต่างจังหวัด"}, {"code": "50000539", "name": "นายฐิติพันธุ์ พินงรัมย์", "section": "FCA", "sub": "SUB CKM", "month": "MAR", "reason": "เหตุผลส่วนตัว"}, {"code": "50000544", "name": "นายสมรักษ์ นวลสกุลนิภา", "section": "FCA", "sub": "SUB CKM", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000547", "name": "นายศุภสัณห์ กิมานันทน์", "section": "FCA", "sub": "SUB CKM", "month": "MAY", "reason": "ขาดงาน 3 วัน"}, {"code": "50000611", "name": "นายกฤษดา กตะศิลา", "section": "FCA", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000620", "name": "นายไพอนันต์ หวังผล", "section": "FCA", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "1004278", "name": "น.ส.รุ้งลาวัลย์ พรมศรี", "section": "FCA", "sub": "SUB CPP", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "50000441", "name": "นายณัฐพงษ์ ชัยสิทธิ์", "section": "INP", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000565", "name": "นายทวีศักดิ์ จันทร์สุข", "section": "INP", "sub": "SUB CKM", "month": "JUL", "reason": "เหตุผลส่วนตัว"}, {"code": "50000631", "name": "นายธนภัทร สิริธาวุธ", "section": "INP", "sub": "SUB CKM", "month": "NOV", "reason": "กลับต่างจังหวัด"}, {"code": "1003980", "name": "นายณัฐพงศ์ ธรรมราช", "section": "ISP", "sub": "SUB CPP", "month": "APR", "reason": "ปรับบรรจุ"}, {"code": "1004116", "name": "น.ส.ปราถนา  ตุ่มดาวเรือง", "section": "IND", "sub": "SUB CPP", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "1004117", "name": "น.ส.อาธิญา  ระดมงาม", "section": "IND", "sub": "SUB CPP", "month": "JAN", "reason": "กลับต่างจังหวัด"}, {"code": "1004525", "name": "นายณัฐพล เมืองมา", "section": "IND", "sub": "SUB CPP", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "1004528", "name": "นายชิดณรงค์ ดวงศรี", "section": "IND", "sub": "SUB CPP", "month": "JAN", "reason": "กลับต่างจังหวัด"}, {"code": "1004548", "name": "น.ส.สุนิสา  สุขล้อม", "section": "IND", "sub": "SUB CPP", "month": "JUL", "reason": "เหตุผลส่วนตัว"}, {"code": "1004685", "name": "นายกณิศ ปันเงิน", "section": "IND", "sub": "SUB CPP", "month": "JUL", "reason": "ธุรกิจส่วนตัว"}, {"code": "1004754", "name": "นายหัสนัย หารจันทร์", "section": "IND", "sub": "SUB CPP", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "1004756", "name": "นายอรรถวิช พรมพิทักษ์", "section": "IND", "sub": "SUB CPP", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000162", "name": "น.ส.เจนจิรา  พลเขต", "section": "IND", "sub": "SUB TFW", "month": "DEC", "reason": "ได้งานใหม่"}, {"code": "40000163", "name": "น.ส.ธิดารัตน์  ปัญญาประสิทธิ์", "section": "IND", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000164", "name": "น.ส.ชญานี  หาญกล้า", "section": "IND", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "50000566", "name": "น.ส.ชลฤด พิมลพันธุ์", "section": "IND", "sub": "SUB CKM", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "50000567", "name": "น.ส.ชุติภา วิชระโภชน์", "section": "IND", "sub": "SUB CKM", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "50000584", "name": "นายวัฒนพงศ์ หินเหล็ก", "section": "IND", "sub": "SUB CKM", "month": "JUN", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "50000586", "name": "นายณัฐวุฒิ แก้วกิ่ง", "section": "IND", "sub": "SUB CKM", "month": "MAY", "reason": "อุปสมบท"}, {"code": "50000588", "name": "น.ส.วราภรณ์ สุขพินิจ", "section": "IND", "sub": "SUB CKM", "month": "JUN", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "50000589", "name": "น.ส.ทิวากรณ์ แผ้วพลสง", "section": "IND", "sub": "SUB CKM", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000590", "name": "น.ส.กมลชนก ชัยธรรม", "section": "IND", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000591", "name": "น.ส.สิดาพร เกตุทองมา", "section": "IND", "sub": "SUB CKM", "month": "SEP", "reason": "ตั้งครรภ์"}, {"code": "50000592", "name": "น.ส.ยุภาวรรณ ภางาม", "section": "IND", "sub": "SUB CKM", "month": "MAY", "reason": "ขาดงาน 3 วัน"}, {"code": "50000593", "name": "น.ส.สุพาภรณ์ ปุริวัน", "section": "IND", "sub": "SUB CKM", "month": "JUL", "reason": "พักรักษาตัว"}, {"code": "50000599", "name": "นายเอกรัตน์ ใจดี", "section": "IND", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000600", "name": "น.ส.กวิสรา เกิดเจริญ", "section": "IND", "sub": "SUB CKM", "month": "SEP", "reason": "กลับต่างจังหวัด"}, {"code": "50000601", "name": "น.ส.เบญจมาศ นรดี", "section": "IND", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000608", "name": "น.ส.วรรณษา ยิ่งเรงเริง", "section": "IND", "sub": "SUB CKM", "month": "JUN", "reason": "กลับต่างจังหวัด"}, {"code": "50000639", "name": "น.ส.อินธิมา  เวียงสมุทร์", "section": "IND", "sub": "SUB CKM", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "50000680", "name": "น.ส.นิราภร  ยุหะประโคน", "section": "IND", "sub": "SUB CKM", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "50000713", "name": "น.ส.โสรญา  พรมนิตย์", "section": "IND", "sub": "SUB CKM", "month": "OCT", "reason": "กลับต่างจังหวัด"}, {"code": "1003869", "name": "นายทัตพงศ์  จุลนิล", "section": "PNB", "sub": "SUB CPP", "month": "JAN", "reason": "พักรักษาตัว"}, {"code": "50000619", "name": "นายศตวรรษ เขียวนิล", "section": "PSC", "sub": "SUB CKM", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000695", "name": "นายบรรหาร นาประทุม", "section": "PSC", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000709", "name": "นายกนกพล  ชฎารส", "section": "PSC", "sub": "SUB CKM", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "1004497", "name": "นายสมเกียรติ โมลี", "section": "DCP", "sub": "SUB CPP", "month": "AUG", "reason": "ธุรกิจส่วนตัว"}, {"code": "50000473", "name": "นายกิตติภณ อุตก๋า", "section": "DCP", "sub": "SUB CKM", "month": "JUN", "reason": "กลับต่างจังหวัด"}, {"code": "50000682", "name": "นายประดิพัทธ์ ภูยาฟ้า", "section": "DCP", "sub": "SUB CKM", "month": "AUG", "reason": "พักรักษาตัว"}, {"code": "50000691", "name": "นายธีรศักดิ์  ศรีเมือง", "section": "DCP", "sub": "SUB CKM", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "50000727", "name": "นายปิยะณัฐ  สุ่มมาตย์", "section": "DCP", "sub": "SUB CKM", "month": "DEC", "reason": "ได้งานใหม่"}, {"code": "1002059", "name": "นายวรโชติ  เชิดสุข", "section": "DLL", "sub": "SUB CPP", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "1002729", "name": "นายวรวิทย์  อุ่นรี", "section": "DLL", "sub": "SUB CPP", "month": "OCT", "reason": "ปรับบรรจุ"}, {"code": "40000065", "name": "นายธนโชติ ศรีจันทร์แก้ว", "section": "DLL", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000066", "name": "นายชินวัตร์ สืบสะอาด", "section": "DLL", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000294", "name": "น.ส.ดิษยา  สุขดา", "section": "DLL", "sub": "SUB CKM", "month": "MAY", "reason": "ปรับบรรจุ"}, {"code": "50000361", "name": "นายมาโนช อินทรีย์", "section": "DLL", "sub": "SUB CKM", "month": "APR", "reason": "กลับต่างจังหวัด"}, {"code": "50000450", "name": "นายธีรพันธ์ อ่ำทอง", "section": "DLL", "sub": "SUB CKM", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000497", "name": "นายณัฐพล เจริญพล", "section": "DLL", "sub": "SUB CKM", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000551", "name": "นายธนพล อันตาละโลก", "section": "DLL", "sub": "SUB CKM", "month": "APR", "reason": "พักรักษาตัว"}, {"code": "50000557", "name": "นายเกษมศักดิ์ สะติภา", "section": "DLL", "sub": "SUB CKM", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000564", "name": "นายอนุชา ดาวช่วย", "section": "DLL", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000605", "name": "นายพชรพล กมลเมือง", "section": "DLL", "sub": "SUB CKM", "month": "SEP", "reason": "พักรักษาตัว"}, {"code": "50000613", "name": "นายพงษ์ศักดิ์ สำรวมจิตร", "section": "DLL", "sub": "SUB CKM", "month": "JUL", "reason": "พักรักษาตัว"}, {"code": "50000699", "name": "นายอภิสิทธิ์ พรมผุย", "section": "DLL", "sub": "SUB CKM", "month": "DEC", "reason": "กลับต่างจังหวัด"}, {"code": "1003238", "name": "นายเมธากร  คำจวนจันทร์", "section": "PEB", "sub": "SUB CPP", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "1004746", "name": "นายสิทธิโชค วังคีรี", "section": "PEB", "sub": "SUB CPP", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "1004747", "name": "นายธีรัช รูปสิงห์", "section": "PEB", "sub": "SUB CPP", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "1004748", "name": "นายสุรชัย ปัญญา", "section": "PEB", "sub": "SUB CPP", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000023", "name": "นายอภิรักษ์ สระทอง", "section": "PEB", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000024", "name": "นายธนวัฒน์ จันทร์ขาว", "section": "PEB", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000025", "name": "นายธงชัย ทองใส", "section": "PEB", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000338", "name": "น.ส.ศศิธร นาสุริยวงษ์", "section": "PEB", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000514", "name": "นายธนากร นามณฑา", "section": "PEB", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000515", "name": "นายกิตติศักดิ์ คงนาวัง", "section": "PEB", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000516", "name": "นายอรรถพล แช่ตั้ง", "section": "PEB", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000522", "name": "นายวิชิตชัย โทแก้ว", "section": "PEB", "sub": "SUB CKM", "month": "FEB", "reason": "ไม่มีโอที"}, {"code": "50000523", "name": "นายณัฐนันท์ สิทธิ", "section": "PEB", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000609", "name": "นายอดิศร มีสิทธิ์", "section": "PEB", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000610", "name": "นายเดชศักดา แย้มจันทึก", "section": "PEB", "sub": "SUB CKM", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "50000634", "name": "นายศราวุฒิ  จุ้ยกลาง", "section": "PEB", "sub": "SUB CKM", "month": "AUG", "reason": "พักรักษาตัว"}, {"code": "50000693", "name": "นายวิระ  จันทร์เวียง", "section": "PEB", "sub": "SUB CKM", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "1004740", "name": "นายวันเฉลิม ลาธิ", "section": "ASA", "sub": "SUB CPP", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "1004741", "name": "นายจิรภัทร รักชาติ", "section": "ASA", "sub": "SUB CPP", "month": "NOV", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "1004743", "name": "น.ส.บุษกร นรดี", "section": "ASA", "sub": "SUB CPP", "month": "MAY", "reason": "กลับต่างจังหวัด"}, {"code": "40000008", "name": "นายปฐมพงศ์ ปะนาเต", "section": "ASA", "sub": "SUB TFW", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "40000012", "name": "นายอิทธิพัทธ์ คำไทย", "section": "ASA", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000042", "name": "นายกัมพล ตีกา", "section": "ASA", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000136", "name": "น.ส.มุกธิดา  ตะลาโส", "section": "ASA", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000146", "name": "น.ส.จีรนันท์ คำมงคล", "section": "ASA", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000153", "name": "นายจิรภัทร  บุญแก้ว", "section": "ASA", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000157", "name": "น.ส.พิมพ์พร กุลชาติ", "section": "ASA", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "50000233", "name": "นายพงศธร  เพ็ชรจันทร์", "section": "ASA", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000429", "name": "นายยุทธนา อาจปละ", "section": "ASA", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000460", "name": "นายเศรษฐา สอนอร", "section": "ASA", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000520", "name": "นายแสงทวี อรรคศรีวร", "section": "ASA", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000532", "name": "นายปฐม ณพรรัมย์", "section": "ASA", "sub": "SUB CKM", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000533", "name": "น.ส.อารียา มีปัดมา", "section": "ASA", "sub": "SUB CKM", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000623", "name": "น.ส.กัญญาณัฐ  มุมทอง", "section": "ASA", "sub": "SUB CKM", "month": "JUL", "reason": "พักรักษาตัว"}, {"code": "1003390", "name": "นายวัชรเกียรติ  เกตุนาค", "section": "ASA", "sub": "SUB CPP", "month": "AUG", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "40000096", "name": "นายภูมิมินทร์ ทวะลี", "section": "ASA", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000097", "name": "น.ส.ปนัดดา  รวมออม", "section": "ASA", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000107", "name": "น.ส.เบญจมาศ  อุ่นทะยา", "section": "ASA", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000496", "name": "นายภูชิต ชัยณรงค์", "section": "ASA", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000659", "name": "น.ส.วรรณา  แก้วกัลยา", "section": "ASA", "sub": "SUB CKM", "month": "JUL", "reason": "ขาดงาน 3 วัน"}, {"code": "1004033", "name": "นายบุลากร  ดาบุตร", "section": "ASA", "sub": "SUB CPP", "month": "APR", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "1004106", "name": "นายศิริรัตน์  รอบคอบ", "section": "ASA", "sub": "SUB CPP", "month": "JUN", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "1004522", "name": "น.ส.ปาริชาต  กิวขุนทด", "section": "ASA", "sub": "SUB CPP", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "1004724", "name": "นายวรเดช จันหอม", "section": "ASA", "sub": "SUB CPP", "month": "MAY", "reason": "ปรับบรรจุ"}, {"code": "1004744", "name": "นายเศรษฐพงศ์ ไร่เกื้อ", "section": "ASA", "sub": "SUB CPP", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "1004745", "name": "น.ส.อรอุมา สุพล", "section": "ASA", "sub": "SUB CPP", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000007", "name": "นายภาคินัย เพียขันทา", "section": "ASA", "sub": "SUB TFW", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "40000027", "name": "นายศรายุทธ แก้วมะลัง", "section": "ASA", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000044", "name": "นายศิริพงศ์ บุญอาจ", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000048", "name": "นายอิทธิฤทธิ์ สุปินะ", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000049", "name": "นายสิทธิโชค นามวงษ์", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000050", "name": "นายรชตะ ชัยยะ", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000051", "name": "นายสหพล นุชวงศ์", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000052", "name": "น.ส.ชมพูนุช อ่วมน้อย", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000053", "name": "น.ส.ชลธิชา ขอสินกลาง", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000054", "name": "น.ส.เพ็ญนภา นรมาตย์", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000055", "name": "น.ส.พรวิภา แก้วพิกุล", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000056", "name": "น.ส.เจนจิรา ชินพะวอ", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000057", "name": "น.ส.ศิริรัตน์ รุ่งกมล", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000058", "name": "น.ส.กุลสตรี บุญตน", "section": "ASA", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000059", "name": "น.ส.จันทิรา ภูล้นแก้ว", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000060", "name": "นายกฤษณพงษ์ ปรังประโคน", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000074", "name": "น.ส.ศรัญญา ชนะพันธ์", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000075", "name": "น.ส.สุภาวดี จะเชนรัมย์", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000076", "name": "นายธนโชติ ก่นโคกกรวด", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000081", "name": "นายมงคล นพเก้า", "section": "ASA", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000082", "name": "น.ส.นฤมล โมคลา", "section": "ASA", "sub": "SUB TFW", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "40000083", "name": "นายอภิรักษ์ โสลันดา", "section": "ASA", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000084", "name": "นายชาญวิทย์ ไขแสง", "section": "ASA", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000085", "name": "นายรัฐพงษ์ อภัยโส", "section": "ASA", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000086", "name": "น.ส.พัชรภรณ์ อ่วมขันธ์", "section": "ASA", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000087", "name": "นายสุริยันต์ สิทธิจักร", "section": "ASA", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000088", "name": "น.ส.ศศิธร พินัน", "section": "ASA", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000091", "name": "น.ส.เบญจมาศ พรเพ็ชร", "section": "ASA", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000092", "name": "น.ส.อาทิตติญา วิฬุริยะกุล", "section": "ASA", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000093", "name": "นายณัฐวุฒิ ปันต่า", "section": "ASA", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000094", "name": "นายปัณณทัต มัชแมน", "section": "ASA", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000095", "name": "นายอาทิตย์ วาปีสังข์", "section": "ASA", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000106", "name": "นายธนัช  ทวยแก้ว", "section": "ASA", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000119", "name": "น.ส.สลิลทิพย์ ชัยเจริญ", "section": "ASA", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000122", "name": "นายเจษฎากร วงษ์กระสันต์", "section": "ASA", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000123", "name": "นายทัศน์พล จ่อด้วง", "section": "ASA", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000139", "name": "นายกฤชนันต์  บุพศิริ", "section": "ASA", "sub": "SUB TFW", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "40000141", "name": "นายภัทรวิทย ศรียศ", "section": "ASA", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000158", "name": "นายภานุวัฒน์ วันดี", "section": "ASA", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000160", "name": "นายอธิวัฒน์ สมนึก", "section": "ASA", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000161", "name": "นางจินตนา จันทร์เวียง", "section": "ASA", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "40000171", "name": "น.ส.สุกัญญา  พงษ์สุระ", "section": "ASA", "sub": "SUB TFW", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "40000172", "name": "น.ส.สุภาวิณี  ชุ่มเสนา", "section": "ASA", "sub": "SUB TFW", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "40000186", "name": "นายธนกร  เปรมจิตร์", "section": "ASA", "sub": "SUB TFW", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "40000188", "name": "นายยุทธพงศ์  พลเขต", "section": "ASA", "sub": "SUB TFW", "month": "DEC", "reason": "ได้งานใหม่"}, {"code": "50000136", "name": "นายอนุชิต  โฉลกดี", "section": "ASA", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000283", "name": "นายพลวัฒน์  สุภาพันธ์", "section": "ASA", "sub": "SUB CKM", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000477", "name": "นายณัฐพร อินทรปรีชา", "section": "ASA", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000481", "name": "นายณัฐพล เทือกเถาว์", "section": "ASA", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000510", "name": "นายเอกชัย มากดี", "section": "ASA", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000511", "name": "นายอักษรศิลป์ ใหลดี", "section": "ASA", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000512", "name": "นายอุทัย แสงแดง", "section": "ASA", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000513", "name": "นายประพัฒน์ โสภากุล", "section": "ASA", "sub": "SUB CKM", "month": "FEB", "reason": "ไม่มีโอที"}, {"code": "50000540", "name": "นายพชร บุญเลียบ", "section": "ASA", "sub": "SUB CKM", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000546", "name": "น.ส.พุทธิดา ภาระพันธ์", "section": "ASA", "sub": "SUB CKM", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000550", "name": "นายธนพล ลาดนอก", "section": "ASA", "sub": "SUB CKM", "month": "APR", "reason": "กลับต่างจังหวัด"}, {"code": "50000554", "name": "น.ส.สุภาวดี พูดเพราะ", "section": "ASA", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000555", "name": "นายวิชาญ จักร์ดา", "section": "ASA", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000556", "name": "นายศรีนรินทร์ อุดมเดช", "section": "ASA", "sub": "SUB CKM", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000561", "name": "นายวรชิต มอโท", "section": "ASA", "sub": "SUB CKM", "month": "JUN", "reason": "กลับต่างจังหวัด"}, {"code": "50000570", "name": "น.ส.เบญจมาศ สายเสน", "section": "ASA", "sub": "SUB CKM", "month": "JUL", "reason": "ไม่มีโอที"}, {"code": "50000626", "name": "น.ส.อำภา  วิเศษยา", "section": "ASA", "sub": "SUB CKM", "month": "JUL", "reason": "ไม่มีโอที"}, {"code": "50000627", "name": "นายศักย์ดา  พุทธิสัย", "section": "ASA", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000637", "name": "น.ส.วรรณิสา  สีล้วน", "section": "ASA", "sub": "SUB CKM", "month": "JUN", "reason": "ไม่มีโอที"}, {"code": "50000645", "name": "น.ส.ศลิษา  เนื่องภักดี", "section": "ASA", "sub": "SUB CKM", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000646", "name": "นายธีรวัฒน์  แก้วระวัง", "section": "ASA", "sub": "SUB CKM", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000660", "name": "นายสหพันธ์  พรหมบุตร", "section": "ASA", "sub": "SUB CKM", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000661", "name": "นายนิมิตร  ประดับศรี", "section": "ASA", "sub": "SUB CKM", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000662", "name": "น.ส.ปริศนา  ไชยราช", "section": "ASA", "sub": "SUB CKM", "month": "AUG", "reason": "กลับต่างจังหวัด"}, {"code": "50000663", "name": "นายวัฒนา  บุญร่วม", "section": "ASA", "sub": "SUB CKM", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "50000664", "name": "น.ส.วิภานันท์  แสนพรมมา", "section": "ASA", "sub": "SUB CKM", "month": "AUG", "reason": "ไม่มีโอที"}, {"code": "50000678", "name": "นายศุภกร  สายอุราช", "section": "ASA", "sub": "SUB CKM", "month": "SEP", "reason": "ศึกษาต่อ"}, {"code": "50000679", "name": "นายพรรณพฤกษชาติ  พันธ์จำปี", "section": "ASA", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000684", "name": "นายรัชต์ธร จันทรเสนา", "section": "ASA", "sub": "SUB CKM", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "50000689", "name": "นายขวัญลดา นามเกตุ", "section": "ASA", "sub": "SUB CKM", "month": "OCT", "reason": "ได้งานใหม่เป็นรายเดือน"}, {"code": "50000644", "name": "น.ส.ชนม์นิภา  แก้วระวัง", "section": "ASB", "sub": "SUB CKM", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "1003366", "name": "น.ส.ฤทัยทิพย์  ยอดยิ่ง", "section": "ASB", "sub": "SUB CPP", "month": "MAR", "reason": "กลับต่างจังหวัด"}, {"code": "1004721", "name": "นายสุรชัย ไชยสีดา", "section": "ASB", "sub": "SUB CPP", "month": "JAN", "reason": "กลับต่างจังหวัด"}, {"code": "40000030", "name": "นายจุฬาวัฒน์ ศรีสุวรรณ", "section": "ASB", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "40000041", "name": "นายศิลปะ สุธารส", "section": "ASB", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000124", "name": "นายประสิทธิ์  หนองพล", "section": "ASB", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000127", "name": "น.ส.พิมพ์พร  โพธิบุรี", "section": "ASB", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000128", "name": "น.ส.กัญญาณัฐ  มีแก้ว", "section": "ASB", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000129", "name": "น.ส.สุพรรณษา  การัตน์", "section": "ASB", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000130", "name": "น.ส.วิไลพร  ฉลูศรี", "section": "ASB", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000131", "name": "น.ส.ธัญญาลักษณ์  พันธ์ดวง", "section": "ASB", "sub": "SUB TFW", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "40000137", "name": "น.ส.สิริมา  วารีใส", "section": "ASB", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "50000190", "name": "นายกฤตภัค  แก้วละมุล", "section": "ASB", "sub": "SUB CKM", "month": "APR", "reason": "กลับต่างจังหวัด"}, {"code": "50000430", "name": "น.ส.สุภาพร กล้าหาญ", "section": "ASB", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000433", "name": "นายอัครพนธ์ บุตรโคต", "section": "ASB", "sub": "SUB CKM", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000509", "name": "นายกฤษฎา หริ่มรักษาทรัพย์", "section": "ASB", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000519", "name": "นายพิชัยยุทธ อันสมศรี", "section": "ASB", "sub": "SUB CKM", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000535", "name": "นายพวงเพชร ทวีสุข", "section": "ASB", "sub": "SUB CKM", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000541", "name": "นายณัฐกิตติ์ กองศรี", "section": "ASB", "sub": "SUB CKM", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000542", "name": "นายอนุชา โรงกลาง", "section": "ASB", "sub": "SUB CKM", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000685", "name": "น.ส.วิภาดา เสนาะวาที", "section": "ASB", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000690", "name": "นายธีรพัฒน์  จันทร์เขียว", "section": "ASB", "sub": "SUB CKM", "month": "SEP", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "50000698", "name": "นายธีรเมธ รักษาสุข", "section": "ASB", "sub": "SUB CKM", "month": "OCT", "reason": "ได้งานใหม่เป็นรายเดือน"}, {"code": "50000716", "name": "น.ส.บุญยานุช เวียงนนท์", "section": "ASB", "sub": "SUB CKM", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "50000719", "name": "นายศักดิ์ดา  แก้วละมล", "section": "ASB", "sub": "SUB CKM", "month": "NOV", "reason": "ขาดงาน 3 วัน"}, {"code": "1003058", "name": "น.ส.อัจฉราภรณ์  ขารพ", "section": "ASB", "sub": "SUB CPP", "month": "JUN", "reason": "เหตุผลส่วนตัว"}, {"code": "1004132", "name": "น.ส.อาจารี  สุพรรณ", "section": "ASB", "sub": "SUB CPP", "month": "MAY", "reason": "เหตุผลส่วนตัว"}, {"code": "1004339", "name": "น.ส.อภิรดี  สมบัตรหล้า", "section": "ASB", "sub": "SUB CPP", "month": "OCT", "reason": "ปรับบรรจุ"}, {"code": "1004545", "name": "น.ส.พัชราภา นามวงษ์", "section": "ASB", "sub": "SUB CPP", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "1004738", "name": "นายวิจิต มาหาร", "section": "ASB", "sub": "SUB CPP", "month": "FEB", "reason": "กลับต่างจังหวัด"}, {"code": "40000001", "name": "นายศักดา ประพาน", "section": "ASB", "sub": "SUB TFW", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "40000002", "name": "น.ส.ราณี หอมชวน", "section": "ASB", "sub": "SUB TFW", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "40000010", "name": "น.ส.ปรียาดา สุภาวะหา", "section": "ASB", "sub": "SUB TFW", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "40000011", "name": "นายสินชัย ยศรุ่งเรือง", "section": "ASB", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000018", "name": "นายสนธยา นาคำ", "section": "ASB", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000019", "name": "น.ส.จิดาภา ห้วยประสิทธิ์", "section": "ASB", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000105", "name": "น.ส.รามาวดี  สีหานาม", "section": "ASB", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000156", "name": "นายธวัชชัย บุญใจ", "section": "ASB", "sub": "SUB TFW", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "50000046", "name": "น.ส.สุพัฒนา  โพธ์มูล", "section": "ASB", "sub": "SUB CKM", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000191", "name": "น.ส.มาศพิมพ์ขวัญ  รูปขันธ์", "section": "ASB", "sub": "SUB CKM", "month": "JUN", "reason": "ไม่มีโอที"}, {"code": "50000219", "name": "น.ส.นงนุช  บุญเชิด", "section": "ASB", "sub": "SUB CKM", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000264", "name": "น.ส.นิภาพร  โมลี", "section": "ASB", "sub": "SUB CKM", "month": "AUG", "reason": "ธุรกิจส่วนตัว"}, {"code": "50000325", "name": "นายอาทิตย์  กตะศิลา", "section": "ASB", "sub": "SUB CKM", "month": "OCT", "reason": "ได้งานใหม่"}, {"code": "50000365", "name": "น.ส.ณัฎฐธิดา  กันจินะ", "section": "ASB", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000422", "name": "นายนรินทร์ ศรีพรม", "section": "ASB", "sub": "SUB CKM", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "50000527", "name": "นายชรพล หลงใจคอย", "section": "ASB", "sub": "SUB CKM", "month": "FEB", "reason": "กลับต่างจังหวัด"}, {"code": "50000528", "name": "น.ส.กัลยา นิลดวงดี", "section": "ASB", "sub": "SUB CKM", "month": "JUL", "reason": "กลับต่างจังหวัด"}, {"code": "50000529", "name": "น.ส.นฤมล ทองประทีบ", "section": "ASB", "sub": "SUB CKM", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000572", "name": "นายสมชาย สารีธรรม", "section": "ASB", "sub": "SUB CKM", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "50000573", "name": "นายสุวัฒนะ ทรงศรี", "section": "ASB", "sub": "SUB CKM", "month": "JUL", "reason": "ขาดงาน 3 วัน"}, {"code": "50000574", "name": "นายไกรวิทย์ ชัยชนะ", "section": "ASB", "sub": "SUB CKM", "month": "MAY", "reason": "ไม่มีโอที"}, {"code": "50000576", "name": "นายประดิษฐ์ ลพคำ", "section": "ASB", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000624", "name": "น.ส.หนึ่งฤทัย  ขันเงิน", "section": "ASB", "sub": "SUB CKM", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000625", "name": "น.ส.พิชชาอร  กุลสุวรรณ", "section": "ASB", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000635", "name": "นายชานุวัฒน์  หนองนงค์", "section": "ASB", "sub": "SUB CKM", "month": "JUL", "reason": "ไม่มีโอที"}, {"code": "50000636", "name": "น.ส.วฤลัดดา  แทนธานี", "section": "ASB", "sub": "SUB CKM", "month": "JUL", "reason": "ไม่มีโอที"}, {"code": "50000651", "name": "น.ส.ธารารัตน์  อ่อนวงค์", "section": "ASB", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000666", "name": "นายธีระ  กิ่งสีดา", "section": "ASB", "sub": "SUB CKM", "month": "JUL", "reason": "กลับต่างจังหวัด"}, {"code": "1003351", "name": "นายหรรษธร  มิสกรถา", "section": "SWS", "sub": "SUB CPP", "month": "MAR", "reason": "กลับต่างจังหวัด"}, {"code": "1003696", "name": "นายเกรียงไกร  บริบูรณ์", "section": "SWS", "sub": "SUB CPP", "month": "NOV", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "1004057", "name": "นายวันชนะ  พิพวนนอก", "section": "SWS", "sub": "SUB CPP", "month": "OCT", "reason": "กลับต่างจังหวัด"}, {"code": "1004441", "name": "นายณัฐพร  โกสิน", "section": "SWS", "sub": "SUB CPP", "month": "FEB", "reason": "กลับต่างจังหวัด"}, {"code": "1004660", "name": "นายพิสิษฐ์  สุขพลอย", "section": "SWS", "sub": "SUB CPP", "month": "APR", "reason": "ปรับบรรจุ"}, {"code": "1004733", "name": "น.ส.จิดาภา พันธ์อินป้อ", "section": "SWS", "sub": "SUB CPP", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "40000005", "name": "นายอมรฤทธิ์ จันทวฤทธิ์", "section": "SWS", "sub": "SUB TFW", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "40000006", "name": "นายวิทยา เสลจุล", "section": "SWS", "sub": "SUB TFW", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "40000020", "name": "นายเนวิน จานมีชัย", "section": "SWS", "sub": "SUB TFW", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "40000021", "name": "นายพีรพัฒน์ สำราญ", "section": "SWS", "sub": "SUB TFW", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "40000033", "name": "นายภาดา แสดคง", "section": "SWS", "sub": "SUB TFW", "month": "APR", "reason": "ได้งานใหม่"}, {"code": "50000043", "name": "นายไพทูลย์  ศรีคราม", "section": "SWS", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000217", "name": "น.ส.อารียา  เทอำรุง", "section": "SWS", "sub": "SUB CKM", "month": "MAY", "reason": "กลับต่างจังหวัด"}, {"code": "50000468", "name": "นายสยมพล แสนสุข", "section": "SWS", "sub": "SUB CKM", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000508", "name": "น.ส.พัชรินทร์ งามสงวน", "section": "SWS", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000534", "name": "น.ส.กรกนก สุนแรง", "section": "SWS", "sub": "SUB CKM", "month": "MAR", "reason": "ได้งานใหม่"}, {"code": "50000543", "name": "น.ส.ณัฐธิดา พิกูลน้ำเที่ยง", "section": "SWS", "sub": "SUB CKM", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000549", "name": "นายอภิสิทธิ์ ทองสุพล", "section": "SWS", "sub": "SUB CKM", "month": "JUN", "reason": "ปรับบรรจุ"}, {"code": "50000560", "name": "นายยศพล ค่ำคูณ", "section": "SWS", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000649", "name": "นายอภิชาติ  ขุนด่านซ้าย", "section": "SWS", "sub": "SUB CKM", "month": "JUL", "reason": "กลับต่างจังหวัด"}, {"code": "50000674", "name": "นายสุริยา  ทึกทา", "section": "SWS", "sub": "SUB CKM", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "50000710", "name": "นายภูริเดช  หมอยา", "section": "SWS", "sub": "SUB CKM", "month": "NOV", "reason": "ได้งานใหม่"}, {"code": "1003370", "name": "น.ส.จารุวรรณ  จันทะศร", "section": "SWS", "sub": "SUB CPP", "month": "MAY", "reason": "เหตุผลส่วนตัว"}, {"code": "1003496", "name": "นายเกียรติศักดิ์  รูปเหมาะ", "section": "SWS", "sub": "SUB CPP", "month": "DEC", "reason": "ส่งตัวคืน ทำผิดกฎ"}, {"code": "40000098", "name": "น.ส.มะลิวัลย์  คีรีเพชร", "section": "SWS", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000099", "name": "น.ส.ปัญจพร  กองโส", "section": "SWS", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000101", "name": "น.ส.สุชาดา  ทาปลัด", "section": "SWS", "sub": "SUB TFW", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "40000102", "name": "น.ส.พรธิดา  ทับเจริญ", "section": "SWS", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000103", "name": "น.ส.รุ่งทิวา  โคนาบาล", "section": "SWS", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000104", "name": "น.ส.วิชุดา  พิศวงปราการ", "section": "SWS", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "40000134", "name": "น.ส.สุพรรษา  สุมะหิงพันย์", "section": "SWS", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "40000135", "name": "น.ส.อภิญญา  ลาดกระโทก", "section": "SWS", "sub": "SUB TFW", "month": "AUG", "reason": "ได้งานใหม่"}, {"code": "50000506", "name": "น.ส.นันท์ธิชา มั่นจิตร์", "section": "SWS", "sub": "SUB CKM", "month": "JAN", "reason": "ได้งานใหม่"}, {"code": "50000577", "name": "นายภัคศิษฐ์ พุฒิโชติพัฒน์", "section": "SWS", "sub": "SUB CKM", "month": "OCT", "reason": "ได้งานใหม่เป็นรายเดือน"}, {"code": "50000578", "name": "นายศุภลักษณ์ สิมมา", "section": "SWS", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000579", "name": "น.ส.อัจฉราพร หงษ์อุดร", "section": "SWS", "sub": "SUB CKM", "month": "MAY", "reason": "ได้งานใหม่"}, {"code": "50000580", "name": "น.ส.ปรารถนา พยัฆษา", "section": "SWS", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000581", "name": "น.ส.นฤมล พัดชา", "section": "SWS", "sub": "SUB CKM", "month": "JUN", "reason": "ได้งานใหม่"}, {"code": "50000582", "name": "น.ส.สุภาพร เจริญพงษ์", "section": "SWS", "sub": "SUB CKM", "month": "SEP", "reason": "ได้งานใหม่"}, {"code": "50000642", "name": "น.ส.จิรัชญา  หอมนาน", "section": "SWS", "sub": "SUB CKM", "month": "SEP", "reason": "กลับต่างจังหวัด"}, {"code": "1003369", "name": "น.ส.เดือนแรม  ชอบดี", "section": "SWS", "sub": "SUB CPP", "month": "AUG", "reason": "ธุรกิจส่วนตัว"}, {"code": "1003444", "name": "นายปรีชา ตองอ่อน", "section": "SWS", "sub": "SUB CPP", "month": "JUN", "reason": "เหตุผลส่วนตัว"}, {"code": "1003499", "name": "น.ส.เพชรไพลิน  อินแสง", "section": "SWS", "sub": "SUB CPP", "month": "FEB", "reason": "ได้งานใหม่"}, {"code": "1004731", "name": "น.ส.จรุงใจ จันทะคุณ", "section": "SWS", "sub": "SUB CPP", "month": "APR", "reason": "เพื่อประกอบอาชีพอื่น"}, {"code": "40000022", "name": "น.ส.ศิริรัตน์ คงแสง", "section": "SWS", "sub": "SUB TFW", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000531", "name": "น.ส.พรทิพย์ จันทร์เมือง", "section": "SWS", "sub": "SUB CKM", "month": "MAR", "reason": "กลับต่างจังหวัด"}, {"code": "40000178", "name": "นายขวัญชัย  อาณาจักรภพ", "section": "SWS", "sub": "SUB TFW", "month": "DEC", "reason": "ได้งานใหม่"}, {"code": "50000603", "name": "นายคมกฤช สุราย", "section": "SWS", "sub": "SUB CKM", "month": "JUL", "reason": "ได้งานใหม่"}, {"code": "50000395", "name": "นายจิรายุส บุตรสี", "section": "TPI", "sub": "SUB CKM", "month": "JUN", "reason": "ปรับบรรจุ"}];
+
+// ========== CHART REGISTRY ==========
+const chartRegistry = {};
+function destroyChart(id) { if (chartRegistry[id]) { chartRegistry[id].destroy(); delete chartRegistry[id]; } }
+function registerChart(id, cfg) { destroyChart(id); chartRegistry[id] = new Chart(document.getElementById(id), cfg); }
+
+// ========== TAB SWITCHING ==========
+function switchTab(tab) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  event.target.classList.add('active');
+  setTimeout(() => renderTab(tab), 50);
 }
+
+// ========== MONTHS ==========
+const MONTHS = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+const MONTH_TH = {'JAN':'ม.ค.','FEB':'ก.พ.','MAR':'มี.ค.','APR':'เม.ย.','MAY':'พ.ค.','JUN':'มิ.ย.','JUL':'ก.ค.','AUG':'ส.ค.','SEP':'ก.ย.','OCT':'ต.ค.','NOV':'พ.ย.','DEC':'ธ.ค.'};
+
+// ========== DATA HELPERS ==========
+function getBySub(sub) { return SHEET1.filter(r => r.sub === sub); }
+function getByMonth(month) { return SHEET1.filter(r => r.month === month); }
+function monthlyBySub(sub, field) {
+  return MONTHS.map(m => {
+    const r = SHEET1.find(d => d.month === m && d.sub === sub);
+    return r ? r[field] : 0;
+  });
+}
+
+const CHART_OPTS = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111827', borderColor: '#1e2d45', borderWidth: 1, titleColor: '#e8f0fe', bodyColor: '#8096b4' } },
+  scales: {
+    x: { grid: { color: 'rgba(30,45,69,0.6)' }, ticks: { color: '#8096b4', font: { size: 11 } } },
+    y: { grid: { color: 'rgba(30,45,69,0.6)' }, ticks: { color: '#8096b4', font: { size: 11 } } }
+  }
+};
+const NO_SCALE_OPTS = {
+  responsive: true, maintainAspectRatio: false,
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111827', borderColor: '#1e2d45', borderWidth: 1, titleColor: '#e8f0fe', bodyColor: '#8096b4' } }
+};
+
+// ========== RENDER OVERVIEW ==========
+function renderOverview() {
+  const totResign = SHEET1.reduce((s, r) => s + r.resign, 0);
+  const cppResign = getBySub('SUB CPP').reduce((s, r) => s + r.resign, 0);
+  const ckmResign = getBySub('SUB CKM').reduce((s, r) => s + r.resign, 0);
+  const tfwResign = getBySub('SUB TFW').reduce((s, r) => s + r.resign, 0);
+  const avgHC = SHEET1.filter(r => r.sub === 'SUB CPP').reduce((s, r) => s + r.avg_hc, 0) +
+                SHEET1.filter(r => r.sub === 'SUB CKM').reduce((s, r) => s + r.avg_hc, 0) +
+                SHEET1.filter(r => r.sub === 'SUB TFW').reduce((s, r) => s + r.avg_hc, 0);
+  const overallRate = (totResign / (avgHC / 12) * 100 / 12).toFixed(2);
+
+  document.getElementById('kpi-overview').innerHTML = `
+    <div class="kpi-card total"><div class="kpi-label">Total Resign</div><div class="kpi-value">${totResign}</div><div class="kpi-sub">รวมทั้งปี FY2025</div></div>
+    <div class="kpi-card total"><div class="kpi-label">Overall Rate</div><div class="kpi-value">${overallRate}%</div><div class="kpi-sub">อัตราลาออกเฉลี่ย</div></div>
+    <div class="kpi-card cpp"><div class="kpi-label">SUB CPP</div><div class="kpi-value">${cppResign}</div><div class="kpi-sub">คนลาออก</div></div>
+    <div class="kpi-card ckm"><div class="kpi-label">SUB CKM</div><div class="kpi-value">${ckmResign}</div><div class="kpi-sub">คนลาออก</div></div>
+    <div class="kpi-card tfw"><div class="kpi-label">SUB TFW</div><div class="kpi-value">${tfwResign}</div><div class="kpi-sub">คนลาออก</div></div>
+  `;
+
+  // Turnover Rate Line Chart
+  registerChart('chartTurnover', {
+    type: 'line',
+    data: {
+      labels: MONTHS.map(m => MONTH_TH[m]),
+      datasets: [
+        { label: 'SUB CPP', data: monthlyBySub('SUB CPP', 'turnover_pct'), borderColor: '#00d4ff', backgroundColor: 'rgba(0,212,255,0.08)', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, fill: false },
+        { label: 'SUB CKM', data: monthlyBySub('SUB CKM', 'turnover_pct'), borderColor: '#ff6b6b', backgroundColor: 'rgba(255,107,107,0.08)', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, fill: false },
+        { label: 'SUB TFW', data: monthlyBySub('SUB TFW', 'turnover_pct'), borderColor: '#06d6a0', backgroundColor: 'rgba(6,214,160,0.08)', tension: 0.3, pointRadius: 4, pointHoverRadius: 6, fill: false }
+      ]
+    },
+    options: { ...CHART_OPTS, scales: { ...CHART_OPTS.scales, y: { ...CHART_OPTS.scales.y, ticks: { ...CHART_OPTS.scales.y.ticks, callback: v => v + '%' } } } }
+  });
+
+  // Legend
+  document.getElementById('legend-turnover').innerHTML = `
+    <div class="legend-item"><div class="legend-dot" style="background:#00d4ff"></div>SUB CPP</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#ff6b6b"></div>SUB CKM</div>
+    <div class="legend-item"><div class="legend-dot" style="background:#06d6a0"></div>SUB TFW</div>
+  `;
+
+  // Resign Bar Chart
+  registerChart('chartResignBar', {
+    type: 'bar',
+    data: {
+      labels: MONTHS.map(m => MONTH_TH[m]),
+      datasets: [
+        { label: 'SUB CPP', data: monthlyBySub('SUB CPP', 'resign'), backgroundColor: 'rgba(0,212,255,0.7)', borderRadius: 3 },
+        { label: 'SUB CKM', data: monthlyBySub('SUB CKM', 'resign'), backgroundColor: 'rgba(255,107,107,0.7)', borderRadius: 3 },
+        { label: 'SUB TFW', data: monthlyBySub('SUB TFW', 'resign'), backgroundColor: 'rgba(6,214,160,0.7)', borderRadius: 3 }
+      ]
+    },
+    options: { ...CHART_OPTS, plugins: { ...CHART_OPTS.plugins, legend: { display: true, labels: { color: '#8096b4', font: { size: 11 } } } } }
+  });
+
+  // Headcount Line
+  registerChart('chartHeadcount', {
+    type: 'line',
+    data: {
+      labels: MONTHS.map(m => MONTH_TH[m]),
+      datasets: [
+        { label: 'SUB CPP', data: monthlyBySub('SUB CPP', 'end_hc'), borderColor: '#00d4ff', tension: 0.2, pointRadius: 3, fill: false },
+        { label: 'SUB CKM', data: monthlyBySub('SUB CKM', 'end_hc'), borderColor: '#ff6b6b', tension: 0.2, pointRadius: 3, fill: false },
+        { label: 'SUB TFW', data: monthlyBySub('SUB TFW', 'end_hc'), borderColor: '#06d6a0', tension: 0.2, pointRadius: 3, fill: false }
+      ]
+    },
+    options: { ...CHART_OPTS, plugins: { ...CHART_OPTS.plugins, legend: { display: true, labels: { color: '#8096b4', font: { size: 11 } } } } }
+  });
+
+  // Doughnut
+  registerChart('chartDoughnut', {
+    type: 'doughnut',
+    data: {
+      labels: ['SUB CPP', 'SUB CKM', 'SUB TFW'],
+      datasets: [{ data: [cppResign, ckmResign, tfwResign], backgroundColor: ['rgba(0,212,255,0.8)', 'rgba(255,107,107,0.8)', 'rgba(6,214,160,0.8)'], borderColor: '#111827', borderWidth: 2 }]
+    },
+    options: { ...NO_SCALE_OPTS, plugins: { ...NO_SCALE_OPTS.plugins, legend: { display: true, position: 'bottom', labels: { color: '#8096b4', font: { size: 11 }, padding: 16 } } }, cutout: '65%' }
+  });
+
+  // Table
+  const tbody = document.getElementById('tableOverviewBody');
+  tbody.innerHTML = MONTHS.map(m => {
+    const cpp = SHEET1.find(r => r.month === m && r.sub === 'SUB CPP') || {};
+    const ckm = SHEET1.find(r => r.month === m && r.sub === 'SUB CKM') || {};
+    const tfw = SHEET1.find(r => r.month === m && r.sub === 'SUB TFW') || {};
+    const tot = (cpp.resign || 0) + (ckm.resign || 0) + (tfw.resign || 0);
+    return `<tr>
+      <td><strong>${MONTH_TH[m]} ${m}</strong></td>
+      <td>${cpp.resign || 0}</td>
+      <td><div class="rate-bar"><div class="rate-fill" style="width:${Math.min((cpp.turnover_pct||0)*6,120)}px;background:#00d4ff"></div><span class="rate-num" style="color:#00d4ff">${(cpp.turnover_pct||0).toFixed(2)}%</span></div></td>
+      <td>${ckm.resign || 0}</td>
+      <td><div class="rate-bar"><div class="rate-fill" style="width:${Math.min((ckm.turnover_pct||0)*1.2,120)}px;background:#ff6b6b"></div><span class="rate-num" style="color:#ff6b6b">${(ckm.turnover_pct||0).toFixed(2)}%</span></div></td>
+      <td>${tfw.resign || 0}</td>
+      <td><div class="rate-bar"><div class="rate-fill" style="width:${Math.min((tfw.turnover_pct||0)*0.8,120)}px;background:#06d6a0"></div><span class="rate-num" style="color:#06d6a0">${(tfw.turnover_pct||0).toFixed(2)}%</span></div></td>
+      <td><strong>${tot}</strong></td>
+    </tr>`;
+  }).join('');
+}
+
+// ========== RENDER SUB DETAIL ==========
+function renderSubDetail(sub, color, miniId, rateId, hcId) {
+  const data = getBySub(sub);
+  const totalResign = data.reduce((s, r) => s + r.resign, 0);
+  const avgRate = data.reduce((s, r) => s + r.turnover_pct, 0) / data.length;
+  const maxRate = Math.max(...data.map(r => r.turnover_pct));
+  const maxRateMonth = data.find(r => r.turnover_pct === maxRate)?.month || '';
+  const lastHC = data[data.length - 1]?.end_hc || 0;
+
+  document.getElementById(miniId).innerHTML = `
+    <div class="mini-stat"><div class="mini-stat-val" style="color:${color}">${totalResign}</div><div class="mini-stat-lbl">Total Resign ตลอดปี</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" style="color:${color}">${avgRate.toFixed(2)}%</div><div class="mini-stat-lbl">Avg Turnover Rate</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" style="color:${color}">${maxRate.toFixed(2)}%</div><div class="mini-stat-lbl">สูงสุด (${MONTH_TH[maxRateMonth]})</div></div>
+    <div class="mini-stat"><div class="mini-stat-val" style="color:${color}">${lastHC}</div><div class="mini-stat-lbl">HC ณ สิ้นปี</div></div>
+  `;
+
+  registerChart(rateId, {
+    type: 'bar',
+    data: {
+      labels: MONTHS.map(m => MONTH_TH[m]),
+      datasets: [{
+        label: 'Turnover %',
+        data: monthlyBySub(sub, 'turnover_pct'),
+        backgroundColor: MONTHS.map(m => {
+          const r = SHEET1.find(d => d.month === m && d.sub === sub);
+          const v = r?.turnover_pct || 0;
+          const alpha = 0.4 + (v / maxRate) * 0.5;
+          return color.replace(')', `,${alpha})`).replace('rgb', 'rgba');
+        }),
+        borderColor: color, borderWidth: 1, borderRadius: 4
+      }]
+    },
+    options: { ...CHART_OPTS, scales: { ...CHART_OPTS.scales, y: { ...CHART_OPTS.scales.y, ticks: { ...CHART_OPTS.scales.y.ticks, callback: v => v + '%' } } } }
+  });
+
+  registerChart(hcId, {
+    type: 'bar',
+    data: {
+      labels: MONTHS.map(m => MONTH_TH[m]),
+      datasets: [
+        { label: 'Avg HC', data: monthlyBySub(sub, 'avg_hc'), backgroundColor: color.replace(')', ',0.2)').replace('rgb', 'rgba'), borderColor: color, borderWidth: 1, borderRadius: 4, yAxisID: 'y' },
+        { label: 'Resign', data: monthlyBySub(sub, 'resign'), backgroundColor: 'rgba(255,209,102,0.7)', borderColor: '#ffd166', borderWidth: 1, borderRadius: 4, yAxisID: 'y1', type: 'line', tension: 0.3, pointRadius: 4 }
+      ]
+    },
+    options: {
+      ...CHART_OPTS,
+      plugins: { ...CHART_OPTS.plugins, legend: { display: true, labels: { color: '#8096b4', font: { size: 11 } } } },
+      scales: {
+        x: CHART_OPTS.scales.x,
+        y: { ...CHART_OPTS.scales.y, position: 'left', title: { display: true, text: 'Headcount', color: '#8096b4', font: { size: 10 } } },
+        y1: { ...CHART_OPTS.scales.y, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Resign', color: '#ffd166', font: { size: 10 } }, ticks: { color: '#ffd166', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// ========== RENDER RESIGN TAB ==========
+function renderResign() {
+  // Reason counts
+  const reasonCount = {};
+  SHEET2.forEach(r => { if (r.reason) reasonCount[r.reason] = (reasonCount[r.reason] || 0) + 1; });
+  const sortedReasons = Object.entries(reasonCount).sort((a, b) => b[1] - a[1]);
+  const maxCount = sortedReasons[0]?.[1] || 1;
+
+  document.getElementById('reasonList').innerHTML = sortedReasons.map(([reason, count]) => `
+    <div class="reason-item">
+      <div class="reason-header">
+        <span class="reason-name">${reason}</span>
+        <span class="reason-count">${count} คน (${((count/SHEET2.length)*100).toFixed(1)}%)</span>
+      </div>
+      <div class="reason-track"><div class="reason-fill" style="width:${(count/maxCount*100)}%"></div></div>
+    </div>
+  `).join('');
+
+  // Reason by Sub stacked bar
+  const subs = ['SUB CPP', 'SUB CKM', 'SUB TFW'];
+  const topReasons = sortedReasons.slice(0, 6).map(r => r[0]);
+  const colors6 = ['rgba(0,212,255,0.8)', 'rgba(255,107,107,0.8)', 'rgba(6,214,160,0.8)', 'rgba(255,209,102,0.8)', 'rgba(157,78,221,0.8)', 'rgba(255,159,64,0.8)'];
+
+  registerChart('chartReasonSub', {
+    type: 'bar',
+    data: {
+      labels: subs,
+      datasets: topReasons.map((reason, i) => ({
+        label: reason,
+        data: subs.map(sub => SHEET2.filter(r => r.sub === sub && r.reason === reason).length),
+        backgroundColor: colors6[i], borderRadius: 2
+      }))
+    },
+    options: { ...CHART_OPTS, plugins: { ...CHART_OPTS.plugins, legend: { display: true, labels: { color: '#8096b4', font: { size: 10 }, boxWidth: 12 } } }, scales: { ...CHART_OPTS.scales, x: { ...CHART_OPTS.scales.x, stacked: true }, y: { ...CHART_OPTS.scales.y, stacked: true } } }
+  });
+
+  // Reason by Month
+  registerChart('chartReasonMonth', {
+    type: 'bar',
+    data: {
+      labels: MONTHS.map(m => MONTH_TH[m]),
+      datasets: topReasons.map((reason, i) => ({
+        label: reason,
+        data: MONTHS.map(m => SHEET2.filter(r => r.month === m && r.reason === reason).length),
+        backgroundColor: colors6[i], borderRadius: 2
+      }))
+    },
+    options: { ...CHART_OPTS, plugins: { ...CHART_OPTS.plugins, legend: { display: true, labels: { color: '#8096b4', font: { size: 10 }, boxWidth: 12 } } }, scales: { ...CHART_OPTS.scales, x: { ...CHART_OPTS.scales.x, stacked: true }, y: { ...CHART_OPTS.scales.y, stacked: true } } }
+  });
+
+  // Section bar
+  const sectionCount = {};
+  SHEET2.forEach(r => { if (r.section) sectionCount[r.section] = (sectionCount[r.section] || 0) + 1; });
+  const topSections = Object.entries(sectionCount).sort((a, b) => b[1] - a[1]).slice(0, 10);
+
+  registerChart('chartSection', {
+    type: 'bar',
+    data: {
+      labels: topSections.map(s => s[0]),
+      datasets: [{ data: topSections.map(s => s[1]), backgroundColor: 'rgba(0,212,255,0.6)', borderColor: '#00d4ff', borderWidth: 1, borderRadius: 4 }]
+    },
+    options: { ...CHART_OPTS, indexAxis: 'y', scales: { x: CHART_OPTS.scales.x, y: { grid: { color: 'rgba(30,45,69,0.6)' }, ticks: { color: '#8096b4', font: { size: 11 } } } } }
+  });
+
+  // Fill month filter
+  const sel = document.getElementById('filterMonth');
+  sel.innerHTML = '<option value="">ทุกเดือน</option>' + MONTHS.map(m => `<option>${m}</option>`).join('');
+
+  renderResignTable();
+}
+
+let resignTableData = [];
+function renderResignTable() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const subF = document.getElementById('filterSub').value;
+  const monthF = document.getElementById('filterMonth').value;
+
+  resignTableData = SHEET2.filter(r => {
+    const matchSearch = !search || r.name.toLowerCase().includes(search) || r.section.toLowerCase().includes(search) || r.code.includes(search);
+    const matchSub = !subF || r.sub === subF;
+    const matchMonth = !monthF || r.month === monthF;
+    return matchSearch && matchSub && matchMonth;
+  });
+
+  const subClass = { 'SUB CPP': 'cpp', 'SUB CKM': 'ckm', 'SUB TFW': 'tfw' };
+  document.getElementById('resignTableBody').innerHTML = resignTableData.map((r, i) => `
+    <tr>
+      <td style="color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:11px">${i + 1}</td>
+      <td style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)">${r.code}</td>
+      <td>${r.name}</td>
+      <td><span style="color:var(--accent);font-size:12px">${r.section}</span></td>
+      <td><span class="tag ${subClass[r.sub] || ''}">${r.sub}</span></td>
+      <td style="font-size:12px">${MONTH_TH[r.month] || r.month}</td>
+      <td style="color:var(--muted);font-size:12px">${r.reason}</td>
+    </tr>
+  `).join('');
+  document.getElementById('tableCount').textContent = `แสดง ${resignTableData.length} รายการ จากทั้งหมด ${SHEET2.length} รายการ`;
+}
+
+// ========== RENDER TAB ==========
+function renderTab(tab) {
+  if (tab === 'overview') renderOverview();
+  else if (tab === 'cpp') renderSubDetail('SUB CPP', '#00d4ff', 'mini-cpp', 'chartCppRate', 'chartCppHC');
+  else if (tab === 'ckm') renderSubDetail('SUB CKM', '#ff6b6b', 'mini-ckm', 'chartCkmRate', 'chartCkmHC');
+  else if (tab === 'tfw') renderSubDetail('SUB TFW', '#06d6a0', 'mini-tfw', 'chartTfwRate', 'chartTfwHC');
+  else if (tab === 'resign') renderResign();
+}
+
+// ========== EXCEL UPLOAD ==========
+document.getElementById('fileInput').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const status = document.getElementById('uploadStatus');
+  status.textContent = '⏳ กำลังอ่านไฟล์...';
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
+
+      // Parse Sheet 1
+      const ws1 = wb.Sheets['Data All Sub - Month'];
+      if (!ws1) throw new Error('ไม่พบ Sheet "Data All Sub - Month"');
+      const raw1 = XLSX.utils.sheet_to_json(ws1, { header: 1, defval: null });
+      const MONTH_LIST = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+      const newS1 = [];
+      for (let i = 1; i < raw1.length; i++) {
+        const row = raw1[i];
+        const m = String(row[0] || '').trim().toUpperCase();
+        if (MONTH_LIST.includes(m)) {
+          newS1.push({
+            month: m,
+            sub: String(row[1] || '').trim(),
+            start_hc: parseFloat(row[2]) || 0,
+            end_hc: parseFloat(row[3]) || 0,
+            avg_hc: parseFloat(row[4]) || 0,
+            resign: parseInt(row[5]) || 0,
+            turnover_pct: parseFloat(row[6]) || 0
+          });
+        }
+      }
+
+      // Parse Sheet 2
+      const ws2 = wb.Sheets['DATA Resign 2025'];
+      if (!ws2) throw new Error('ไม่พบ Sheet "DATA Resign 2025"');
+      const raw2 = XLSX.utils.sheet_to_json(ws2, { header: 1, defval: null });
+      const newS2 = [];
+      for (let i = 1; i < raw2.length; i++) {
+        const row = raw2[i];
+        if (!row[0]) continue;
+        let dateVal = row[6];
+        let month = '';
+        if (dateVal instanceof Date) {
+          month = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][dateVal.getMonth()];
+        } else if (typeof dateVal === 'number') {
+          const d = new Date(Math.round((dateVal - 25569) * 86400 * 1000));
+          month = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
+        } else if (typeof dateVal === 'string') {
+          const d = new Date(dateVal);
+          if (!isNaN(d)) month = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
+        }
+        const pos = String(row[5] || '');
+        const subMatch = pos.match(/SUB (CPP|CKM|TFW)/);
+        newS2.push({
+          code: String(row[0] || ''),
+          name: String(row[1] || '').trim(),
+          section: String(row[4] || '').trim(),
+          sub: subMatch ? 'SUB ' + subMatch[1] : '',
+          month, reason: String(row[7] || '').trim()
+        });
+      }
+
+      SHEET1 = newS1;
+      SHEET2 = newS2;
+      status.textContent = `✅ โหลดสำเร็จ: ${newS1.length} แถว (Sheet1), ${newS2.length} คน (Sheet2)`;
+      renderTab('overview');
+    } catch (err) {
+      status.textContent = '❌ Error: ' + err.message;
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// ========== SEARCH / FILTER EVENTS ==========
+document.getElementById('searchInput').addEventListener('input', renderResignTable);
+document.getElementById('filterSub').addEventListener('change', renderResignTable);
+document.getElementById('filterMonth').addEventListener('change', renderResignTable);
+
+// ========== INIT ==========
+window.addEventListener('load', () => {
+  // Pre-populate SHEET2 with embedded data if needed
+  // (empty by default — users upload to get resign detail)
+  // For demo, generate from sheet1 counts
+  renderTab('overview');
+});
+</script>
+</body>
+</html>
