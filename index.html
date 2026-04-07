@@ -409,6 +409,52 @@
         <tbody id="tableOverviewBody"></tbody>
       </table>
     </div>
+
+    <!-- RESIGN SUMMARY IN OVERVIEW -->
+    <div class="section-title" style="margin-top:8px;">สาเหตุการลาออก — ภาพรวม FY2025</div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Top สาเหตุการลาออก (ภาพรวม)</div>
+        <div class="chart-subtitle">จำนวนรวมทุก Sub · คลิกแถบเพื่อดูรายละเอียด</div>
+        <div class="chart-wrap"><canvas id="chartOverviewReason" height="260"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">สาเหตุแยกตาม Sub</div>
+        <div class="chart-subtitle">เปรียบเทียบ CPP · CKM · TFW</div>
+        <div class="chart-wrap"><canvas id="chartOverviewReasonSub" height="260"></canvas></div>
+      </div>
+    </div>
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">สาเหตุลาออกรายเดือน</div>
+        <div class="chart-subtitle">แนวโน้มสาเหตุลาออกตลอดปี (Stacked)</div>
+        <div class="chart-wrap"><canvas id="chartOverviewReasonMonth" height="220"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">สัดส่วนสาเหตุลาออก</div>
+        <div class="chart-subtitle">Top 6 สาเหตุ (Doughnut)</div>
+        <div class="chart-wrap" style="display:flex;align-items:center;justify-content:center;max-height:220px;">
+          <canvas id="chartOverviewReasonDoughnut" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="chart-title" style="margin-bottom:4px;">สรุปสาเหตุลาออกรายเดือน × Sub</div>
+      <div class="chart-subtitle">จำนวนแยกตามสาเหตุ เดือน และ Sub</div>
+      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
+        <span class="filter-label">กรองตาม Sub:</span>
+        <button class="filter-btn active" onclick="filterOverviewResign('',this)">ทั้งหมด</button>
+        <button class="filter-btn cpp" onclick="filterOverviewResign('SUB CPP',this)">SUB CPP</button>
+        <button class="filter-btn ckm" onclick="filterOverviewResign('SUB CKM',this)">SUB CKM</button>
+        <button class="filter-btn tfw" onclick="filterOverviewResign('SUB TFW',this)">SUB TFW</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table id="tableResignSummary">
+          <thead><tr id="tableResignSummaryHead"></tr></thead>
+          <tbody id="tableResignSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <!-- CPP TAB -->
@@ -646,6 +692,70 @@ function renderOverview() {
     options: { ...NO_SCALE_OPTS, plugins: { ...NO_SCALE_OPTS.plugins, legend: { display: true, position: 'bottom', labels: { color: '#8096b4', font: { size: 11 }, padding: 16 } } }, cutout: '65%' }
   });
 
+  // ===== RESIGN OVERVIEW CHARTS =====
+  const reasonCount = {};
+  const reasonBySub = { 'SUB CPP': {}, 'SUB CKM': {}, 'SUB TFW': {} };
+  SHEET2.forEach(r => {
+    if (!r.reason) return;
+    reasonCount[r.reason] = (reasonCount[r.reason] || 0) + 1;
+    if (reasonBySub[r.sub]) reasonBySub[r.sub][r.reason] = (reasonBySub[r.sub][r.reason] || 0) + 1;
+  });
+  const sortedReasons = Object.entries(reasonCount).sort((a, b) => b[1] - a[1]);
+  const top6 = sortedReasons.slice(0, 6).map(r => r[0]);
+  const colors6 = ['rgba(0,212,255,0.8)','rgba(255,107,107,0.8)','rgba(6,214,160,0.8)','rgba(255,209,102,0.8)','rgba(157,78,221,0.8)','rgba(255,159,64,0.8)'];
+  const colors6Border = ['#00d4ff','#ff6b6b','#06d6a0','#ffd166','#9d4edd','#ff9f40'];
+
+  // Horizontal bar — all reasons
+  registerChart('chartOverviewReason', {
+    type: 'bar',
+    data: {
+      labels: sortedReasons.map(r => r[0]),
+      datasets: [{ data: sortedReasons.map(r => r[1]), backgroundColor: sortedReasons.map((_, i) => colors6[i % 6]), borderColor: sortedReasons.map((_, i) => colors6Border[i % 6]), borderWidth: 1, borderRadius: 4 }]
+    },
+    options: { ...CHART_OPTS, indexAxis: 'y', scales: { x: CHART_OPTS.scales.x, y: { grid: { color: 'rgba(30,45,69,0.6)' }, ticks: { color: '#8096b4', font: { size: 11 } } } } }
+  });
+
+  // Stacked bar — by Sub
+  registerChart('chartOverviewReasonSub', {
+    type: 'bar',
+    data: {
+      labels: ['SUB CPP', 'SUB CKM', 'SUB TFW'],
+      datasets: top6.map((reason, i) => ({
+        label: reason,
+        data: ['SUB CPP','SUB CKM','SUB TFW'].map(sub => reasonBySub[sub][reason] || 0),
+        backgroundColor: colors6[i], borderRadius: 2
+      }))
+    },
+    options: { ...CHART_OPTS, plugins: { ...CHART_OPTS.plugins, legend: { display: true, labels: { color: '#8096b4', font: { size: 10 }, boxWidth: 12 } } }, scales: { ...CHART_OPTS.scales, x: { ...CHART_OPTS.scales.x, stacked: true }, y: { ...CHART_OPTS.scales.y, stacked: true } } }
+  });
+
+  // Stacked line/bar — by Month
+  registerChart('chartOverviewReasonMonth', {
+    type: 'bar',
+    data: {
+      labels: MONTHS.map(m => MONTH_TH[m]),
+      datasets: top6.map((reason, i) => ({
+        label: reason,
+        data: MONTHS.map(m => SHEET2.filter(r => r.month === m && r.reason === reason).length),
+        backgroundColor: colors6[i], borderRadius: 2
+      }))
+    },
+    options: { ...CHART_OPTS, plugins: { ...CHART_OPTS.plugins, legend: { display: true, labels: { color: '#8096b4', font: { size: 10 }, boxWidth: 12 } } }, scales: { ...CHART_OPTS.scales, x: { ...CHART_OPTS.scales.x, stacked: true }, y: { ...CHART_OPTS.scales.y, stacked: true } } }
+  });
+
+  // Doughnut — top 6 reasons
+  registerChart('chartOverviewReasonDoughnut', {
+    type: 'doughnut',
+    data: {
+      labels: top6,
+      datasets: [{ data: top6.map(r => reasonCount[r] || 0), backgroundColor: colors6, borderColor: '#111827', borderWidth: 2 }]
+    },
+    options: { ...NO_SCALE_OPTS, plugins: { ...NO_SCALE_OPTS.plugins, legend: { display: true, position: 'right', labels: { color: '#8096b4', font: { size: 10 }, padding: 10, boxWidth: 12 } } }, cutout: '60%' }
+  });
+
+  // Resign summary table
+  renderOverviewResignTable('');
+
   // Table
   const tbody = document.getElementById('tableOverviewBody');
   tbody.innerHTML = MONTHS.map(m => {
@@ -664,6 +774,65 @@ function renderOverview() {
       <td><strong>${tot}</strong></td>
     </tr>`;
   }).join('');
+}
+
+// ========== RESIGN OVERVIEW TABLE ==========
+let _overviewResignSubFilter = '';
+function filterOverviewResign(sub, btn) {
+  _overviewResignSubFilter = sub;
+  document.querySelectorAll('#tab-overview .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderOverviewResignTable(sub);
+}
+
+function renderOverviewResignTable(subFilter) {
+  const data = subFilter ? SHEET2.filter(r => r.sub === subFilter) : SHEET2;
+  // Get all unique reasons sorted by count
+  const reasonCount = {};
+  data.forEach(r => { if (r.reason) reasonCount[r.reason] = (reasonCount[r.reason] || 0) + 1; });
+  const reasons = Object.entries(reasonCount).sort((a,b) => b[1]-a[1]).map(r => r[0]);
+
+  // Build pivot: month × reason
+  const pivot = {};
+  MONTHS.forEach(m => {
+    pivot[m] = {};
+    reasons.forEach(reason => {
+      pivot[m][reason] = data.filter(r => r.month === m && r.reason === reason).length;
+    });
+    pivot[m]._total = data.filter(r => r.month === m).length;
+  });
+
+  const head = document.getElementById('tableResignSummaryHead');
+  const body = document.getElementById('tableResignSummaryBody');
+  const colors6 = ['#00d4ff','#ff6b6b','#06d6a0','#ffd166','#9d4edd','#ff9f40'];
+
+  head.innerHTML = `<th>เดือน</th>` + reasons.map((r, i) => `<th style="color:${colors6[i%6]};font-size:11px">${r}</th>`).join('') + `<th>รวม</th>`;
+
+  const maxTotal = Math.max(...MONTHS.map(m => pivot[m]._total));
+  body.innerHTML = MONTHS.map(m => {
+    const tot = pivot[m]._total;
+    const cells = reasons.map((r, i) => {
+      const v = pivot[m][r] || 0;
+      return `<td style="text-align:center;${v > 0 ? `color:${colors6[i%6]};font-weight:600` : 'color:var(--muted)'}">${v || '—'}</td>`;
+    }).join('');
+    const barW = maxTotal > 0 ? Math.round((tot / maxTotal) * 60) : 0;
+    return `<tr>
+      <td><strong>${MONTH_TH[m]}</strong></td>
+      ${cells}
+      <td><div class="rate-bar"><div class="rate-fill" style="width:${barW}px;background:var(--accent)"></div><span class="rate-num">${tot}</span></div></td>
+    </tr>`;
+  }).join('');
+
+  // Grand total row
+  const totCells = reasons.map((r, i) => {
+    const v = data.filter(d => d.reason === r).length;
+    return `<td style="text-align:center;font-weight:700;color:${colors6[i%6]}">${v}</td>`;
+  }).join('');
+  body.innerHTML += `<tr style="border-top:2px solid var(--border);background:var(--surface2)">
+    <td><strong style="color:var(--accent)">รวม</strong></td>
+    ${totCells}
+    <td><strong style="color:var(--accent)">${data.length}</strong></td>
+  </tr>`;
 }
 
 // ========== RENDER SUB DETAIL ==========
