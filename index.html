@@ -8,10 +8,10 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0f1e;
-    --surface: #111827;
-    --surface2: #1a2336;
-    --border: #1e2d45;
+    --bg: #141c2e;
+    --surface: #1c2840;
+    --surface2: #233050;
+    --border: #2d4068;
     --accent: #00d4ff;
     --accent2: #ff6b6b;
     --accent3: #ffd166;
@@ -39,8 +39,8 @@
     position: fixed;
     inset: 0;
     background-image:
-      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+      linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px);
     background-size: 40px 40px;
     pointer-events: none;
     z-index: 0;
@@ -390,8 +390,8 @@
       <div class="chart-card">
         <div class="chart-title">สัดส่วนการลาออก</div>
         <div class="chart-subtitle">% แต่ละ Sub ต่อยอดรวม</div>
-        <div class="chart-wrap" style="max-height:220px;display:flex;align-items:center;justify-content:center;">
-          <canvas id="chartDoughnut" height="220"></canvas>
+        <div class="chart-wrap" style="height:260px;display:flex;align-items:center;justify-content:center;">
+          <canvas id="chartDoughnut"></canvas>
         </div>
       </div>
     </div>
@@ -416,7 +416,7 @@
       <div class="chart-card">
         <div class="chart-title">Top สาเหตุการลาออก (ภาพรวม)</div>
         <div class="chart-subtitle">จำนวนรวมทุก Sub · คลิกแถบเพื่อดูรายละเอียด</div>
-        <div class="chart-wrap"><canvas id="chartOverviewReason" height="260"></canvas></div>
+        <div class="chart-wrap"><canvas id="chartOverviewReason" height="340"></canvas></div>
       </div>
       <div class="chart-card">
         <div class="chart-title">สาเหตุแยกตาม Sub</div>
@@ -433,8 +433,8 @@
       <div class="chart-card">
         <div class="chart-title">สัดส่วนสาเหตุลาออก</div>
         <div class="chart-subtitle">Top 6 สาเหตุ (Doughnut)</div>
-        <div class="chart-wrap" style="display:flex;align-items:center;justify-content:center;max-height:220px;">
-          <canvas id="chartOverviewReasonDoughnut" height="220"></canvas>
+        <div class="chart-wrap" style="height:280px;display:flex;align-items:center;justify-content:center;">
+          <canvas id="chartOverviewReasonDoughnut"></canvas>
         </div>
       </div>
     </div>
@@ -523,19 +523,19 @@
       <div class="chart-card">
         <div class="chart-title">สาเหตุแยกตาม Sub</div>
         <div class="chart-subtitle">เปรียบเทียบ CPP · CKM · TFW</div>
-        <div class="chart-wrap"><canvas id="chartReasonSub" height="280"></canvas></div>
+        <div class="chart-wrap"><canvas id="chartReasonSub" height="320"></canvas></div>
       </div>
     </div>
     <div class="charts-grid">
       <div class="chart-card">
         <div class="chart-title">สาเหตุรายเดือน</div>
         <div class="chart-subtitle">แนวโน้มสาเหตุลาออกตลอดปี</div>
-        <div class="chart-wrap"><canvas id="chartReasonMonth" height="240"></canvas></div>
+        <div class="chart-wrap"><canvas id="chartReasonMonth" height="280"></canvas></div>
       </div>
       <div class="chart-card">
         <div class="chart-title">แยกตาม Section</div>
         <div class="chart-subtitle">Top 10 Section ที่มีการลาออกมากสุด</div>
-        <div class="chart-wrap"><canvas id="chartSection" height="240"></canvas></div>
+        <div class="chart-wrap"><canvas id="chartSection" height="280"></canvas></div>
       </div>
     </div>
     <div class="table-card">
@@ -603,15 +603,15 @@ function monthlyBySub(sub, field) {
 
 const CHART_OPTS = {
   responsive: true, maintainAspectRatio: false,
-  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111827', borderColor: '#1e2d45', borderWidth: 1, titleColor: '#e8f0fe', bodyColor: '#8096b4' } },
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2840', borderColor: '#2d4068', borderWidth: 1, titleColor: '#e8f0fe', bodyColor: '#8096b4' } },
   scales: {
-    x: { grid: { color: 'rgba(30,45,69,0.6)' }, ticks: { color: '#8096b4', font: { size: 11 } } },
-    y: { grid: { color: 'rgba(30,45,69,0.6)' }, ticks: { color: '#8096b4', font: { size: 11 } } }
+    x: { grid: { color: 'rgba(45,64,104,0.5)' }, ticks: { color: '#8096b4', font: { size: 11 } } },
+    y: { grid: { color: 'rgba(45,64,104,0.5)' }, ticks: { color: '#8096b4', font: { size: 11 } } }
   }
 };
 const NO_SCALE_OPTS = {
   responsive: true, maintainAspectRatio: false,
-  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#111827', borderColor: '#1e2d45', borderWidth: 1, titleColor: '#e8f0fe', bodyColor: '#8096b4' } }
+  plugins: { legend: { display: false }, tooltip: { backgroundColor: '#1c2840', borderColor: '#2d4068', borderWidth: 1, titleColor: '#e8f0fe', bodyColor: '#8096b4' } }
 };
 
 // ========== RENDER OVERVIEW ==========
@@ -683,13 +683,54 @@ function renderOverview() {
   });
 
   // Doughnut
+  const totalResignForDoughnut = cppResign + ckmResign + tfwResign;
   registerChart('chartDoughnut', {
     type: 'doughnut',
     data: {
       labels: ['SUB CPP', 'SUB CKM', 'SUB TFW'],
-      datasets: [{ data: [cppResign, ckmResign, tfwResign], backgroundColor: ['rgba(0,212,255,0.8)', 'rgba(255,107,107,0.8)', 'rgba(6,214,160,0.8)'], borderColor: '#111827', borderWidth: 2 }]
+      datasets: [{ data: [cppResign, ckmResign, tfwResign], backgroundColor: ['rgba(0,212,255,0.85)', 'rgba(255,107,107,0.85)', 'rgba(6,214,160,0.85)'], borderColor: '#1c2840', borderWidth: 3 }]
     },
-    options: { ...NO_SCALE_OPTS, plugins: { ...NO_SCALE_OPTS.plugins, legend: { display: true, position: 'bottom', labels: { color: '#8096b4', font: { size: 11 }, padding: 16 } } }, cutout: '65%' }
+    options: {
+      ...NO_SCALE_OPTS,
+      plugins: {
+        ...NO_SCALE_OPTS.plugins,
+        legend: { display: true, position: 'bottom', labels: { color: '#8096b4', font: { size: 11 }, padding: 16 } },
+        datalabels: false,
+        tooltip: { ...NO_SCALE_OPTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} คน (${((ctx.parsed/totalResignForDoughnut)*100).toFixed(1)}%)` } }
+      },
+      cutout: '55%',
+      animation: { animateRotate: true },
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { color: '#8096b4', font: { size: 11 }, padding: 16 } },
+        tooltip: { backgroundColor: '#1c2840', borderColor: '#2d4068', borderWidth: 1, titleColor: '#e8f0fe', bodyColor: '#8096b4', callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} คน (${((ctx.parsed/totalResignForDoughnut)*100).toFixed(1)}%)` } },
+        afterDraw: null
+      }
+    },
+    plugins: [{
+      id: 'doughnutLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx, data } = chart;
+        const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+        chart.getDatasetMeta(0).data.forEach((arc, i) => {
+          const value = data.datasets[0].data[i];
+          const pct = ((value / total) * 100).toFixed(1);
+          const midAngle = (arc.startAngle + arc.endAngle) / 2;
+          const r = (arc.innerRadius + arc.outerRadius) / 2;
+          const x = arc.x + r * Math.cos(midAngle);
+          const y = arc.y + r * Math.sin(midAngle);
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 13px JetBrains Mono, monospace';
+          ctx.fillText(`${value}`, x, y - 7);
+          ctx.font = '10px IBM Plex Sans Thai, sans-serif';
+          ctx.fillStyle = 'rgba(255,255,255,0.75)';
+          ctx.fillText(`${pct}%`, x, y + 7);
+          ctx.restore();
+        });
+      }
+    }]
   });
 
   // ===== RESIGN OVERVIEW CHARTS =====
@@ -744,13 +785,48 @@ function renderOverview() {
   });
 
   // Doughnut — top 6 reasons
+  const totalResignDoughnut2 = SHEET2.length;
   registerChart('chartOverviewReasonDoughnut', {
     type: 'doughnut',
     data: {
       labels: top6,
-      datasets: [{ data: top6.map(r => reasonCount[r] || 0), backgroundColor: colors6, borderColor: '#111827', borderWidth: 2 }]
+      datasets: [{ data: top6.map(r => reasonCount[r] || 0), backgroundColor: colors6, borderColor: '#1c2840', borderWidth: 3 }]
     },
-    options: { ...NO_SCALE_OPTS, plugins: { ...NO_SCALE_OPTS.plugins, legend: { display: true, position: 'right', labels: { color: '#8096b4', font: { size: 10 }, padding: 10, boxWidth: 12 } } }, cutout: '60%' }
+    options: {
+      ...NO_SCALE_OPTS,
+      cutout: '50%',
+      plugins: {
+        legend: { display: true, position: 'right', labels: { color: '#8096b4', font: { size: 10 }, padding: 10, boxWidth: 12 } },
+        tooltip: { backgroundColor: '#1c2840', borderColor: '#2d4068', borderWidth: 1, titleColor: '#e8f0fe', bodyColor: '#8096b4', callbacks: { label: ctx => ` ${ctx.label}: ${ctx.parsed} คน (${((ctx.parsed/totalResignDoughnut2)*100).toFixed(1)}%)` } }
+      }
+    },
+    plugins: [{
+      id: 'doughnutLabels2',
+      afterDatasetsDraw(chart) {
+        const { ctx, data } = chart;
+        const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+        chart.getDatasetMeta(0).data.forEach((arc, i) => {
+          const value = data.datasets[0].data[i];
+          if (value === 0) return;
+          const pct = ((value / total) * 100).toFixed(1);
+          if (parseFloat(pct) < 3) return; // skip tiny slices
+          const midAngle = (arc.startAngle + arc.endAngle) / 2;
+          const r = (arc.innerRadius + arc.outerRadius) / 2;
+          const x = arc.x + r * Math.cos(midAngle);
+          const y = arc.y + r * Math.sin(midAngle);
+          ctx.save();
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = '#fff';
+          ctx.font = 'bold 12px JetBrains Mono, monospace';
+          ctx.fillText(`${value}`, x, y - 6);
+          ctx.font = '10px IBM Plex Sans Thai, sans-serif';
+          ctx.fillStyle = 'rgba(255,255,255,0.75)';
+          ctx.fillText(`${pct}%`, x, y + 6);
+          ctx.restore();
+        });
+      }
+    }]
   });
 
   // Resign summary table
@@ -952,7 +1028,27 @@ function renderResign() {
       labels: topSections.map(s => s[0]),
       datasets: [{ data: topSections.map(s => s[1]), backgroundColor: 'rgba(0,212,255,0.6)', borderColor: '#00d4ff', borderWidth: 1, borderRadius: 4 }]
     },
-    options: { ...CHART_OPTS, indexAxis: 'y', scales: { x: CHART_OPTS.scales.x, y: { grid: { color: 'rgba(30,45,69,0.6)' }, ticks: { color: '#8096b4', font: { size: 11 } } } } }
+    options: {
+      ...CHART_OPTS, indexAxis: 'y',
+      scales: { x: { ...CHART_OPTS.scales.x, ticks: { ...CHART_OPTS.scales.x.ticks, stepSize: 1 } }, y: { grid: { color: 'rgba(45,64,104,0.5)' }, ticks: { color: '#8096b4', font: { size: 11 } } } },
+      plugins: { ...CHART_OPTS.plugins, tooltip: { ...CHART_OPTS.plugins.tooltip, callbacks: { label: ctx => ` ${ctx.parsed.x} คน` } } }
+    },
+    plugins: [{
+      id: 'sectionLabels',
+      afterDatasetsDraw(chart) {
+        const { ctx } = chart;
+        chart.getDatasetMeta(0).data.forEach((bar, i) => {
+          const val = chart.data.datasets[0].data[i];
+          ctx.save();
+          ctx.fillStyle = '#e8f0fe';
+          ctx.font = 'bold 11px JetBrains Mono, monospace';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(val, bar.x + 6, bar.y);
+          ctx.restore();
+        });
+      }
+    }]
   });
 
   // Fill month filter
